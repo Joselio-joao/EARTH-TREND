@@ -32,3 +32,8 @@ Para testar localmente:
 ```bash
 python3 -m http.server 4173
 ```
+## Site online
+
+Link público do site: **https://joselio-joao.github.io/EARTH-TREND/**
+
+Para ativar a publicação no GitHub: abre **Settings → Pages**, escolhe **Deploy from a branch**, seleciona a branch `main` e a pasta `/ (root)`, e clica em **Save**.
