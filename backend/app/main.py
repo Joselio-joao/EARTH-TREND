@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from app.datasets import DATASETS, DatasetRecord
+
 
 API_VERSION = "0.1.0"
 
@@ -18,3 +20,9 @@ def health() -> dict[str, str]:
         "service": "earthtrend-api",
         "version": API_VERSION,
     }
+
+
+@app.get("/datasets", tags=["catalog"])
+def datasets() -> dict[str, list[DatasetRecord]]:
+    """Lista as variáveis ambientais disponíveis ou planeadas."""
+    return {"datasets": DATASETS}
