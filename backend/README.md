@@ -27,6 +27,16 @@ Variáveis incluídas:
 - Armazenamento de água terrestre — GRACE / GRACE-FO;
 - Cobertura florestal — MODIS.
 
+## Passo 3: regiões de Angola
+
+Endpoint das regiões:
+
+```text
+GET /regions
+```
+
+A resposta inclui Angola, a capital nacional, o código do país, as 21 províncias e as respetivas capitais administrativas. A lista segue o [Portal Oficial do Governo de Angola](https://governo.gov.ao/angola/provincias).
+
 ## Executar localmente
 
 A partir da raiz do repositório:
@@ -45,7 +55,8 @@ A API fica disponível em `http://127.0.0.1:8000`.
 ```bash
 curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:8000/datasets
+curl http://127.0.0.1:8000/regions
 pytest -q backend/tests
 ```
 
-O próximo passo será criar o endpoint de regiões, antes de ligar os dados científicos reais.
+O próximo passo será definir parâmetros de investigação, antes de ligar os dados científicos reais.

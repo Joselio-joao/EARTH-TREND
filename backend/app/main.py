@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.datasets import DATASETS, DatasetRecord
+from app.regions import ANGOLA, OFFICIAL_SOURCE, PROVINCES, CountryRecord, ProvinceRecord
 
 
 API_VERSION = "0.1.0"
@@ -26,3 +27,13 @@ def health() -> dict[str, str]:
 def datasets() -> dict[str, list[DatasetRecord]]:
     """Lista as variáveis ambientais disponíveis ou planeadas."""
     return {"datasets": DATASETS}
+
+
+@app.get("/regions", tags=["catalog"])
+def regions() -> dict[str, CountryRecord | list[ProvinceRecord] | str]:
+    """Lista Angola e as suas províncias para configurar uma investigação."""
+    return {
+        "country": ANGOLA,
+        "provinces": PROVINCES,
+        "source": OFFICIAL_SOURCE,
+    }
