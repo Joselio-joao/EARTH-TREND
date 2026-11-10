@@ -1,4 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
+from tempfile import NamedTemporaryFile
+from pathlib import Path
 
 from app.datasets import DATASETS, DatasetRecord
 from app.regions import ANGOLA, OFFICIAL_SOURCE, PROVINCES, CountryRecord, ProvinceRecord
@@ -6,6 +9,7 @@ from app.investigations import InvestigationRecord, InvestigationRequest, create
 from app.analysis.models import AnalyzeRequest, AnalyzeResponse
 from app.analysis.trend_analysis import Observation, analyze_trend
 from app.data.sources import SCIENTIFIC_SOURCES, ScientificSource
+from app.data.validate_data import validate_netcdf
 
 
 API_VERSION = "0.1.0"
@@ -47,6 +51,43 @@ def regions() -> dict[str, CountryRecord | list[ProvinceRecord] | str]:
 def data_sources() -> dict[str, list[ScientificSource]]:
     """Lista fontes científicas registadas e o estado da sua integração."""
     return {"sources": SCIENTIFIC_SOURCES}
+
+
+class DataValidationResponse(BaseModel):
+    valid: bool
+    filename: str
+    variable: str
+    dimensions: list[str]
+    time_dimension: str
+    units: str | None
+    latitude_resolution: float | None
+    longitude_resolution: float | None
+    rows: int
+    missing_values: int
+    warnings: list[str]
+
+
+@app.post("/data/validate", response_model=DataValidationResponse, tags=["data"])
+async def validate_data_file(
+    file: UploadFile = File(...),
+    variable_name: str = Query(..., min_length=1),
+) -> DataValidationResponse:
+    """Valida metadados de um NetCDF enviado sem guardar o ficheiro permanentemente."""
+    if not file.filename or not file.filename.lower().endswith((".nc", ".nc4", ".netcdf")):
+        raise HTTPException(status_code=415, detail="Envie um ficheiro NetCDF (.nc, .nc4 ou .netcdf).")
+
+    temporary_path: str | None = None
+    try:
+        with NamedTemporaryFile(suffix=".nc", delete=False) as temporary:
+            temporary.write(await file.read())
+            temporary_path = temporary.name
+        result = validate_netcdf(temporary_path, variable_name, file.filename)
+        return DataValidationResponse(**result.__dict__)
+    except (OSError, ValueError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    finally:
+        if temporary_path:
+            Path(temporary_path).unlink(missing_ok=True)
 
 
 @app.post("/investigations", response_model=InvestigationRecord, tags=["investigations"])

@@ -99,3 +99,13 @@ GET /data-sources
 ```
 
 O manifesto regista o GPM IMERG Final Daily V07, os formatos documentados, as opções temporais, a resolução espacial e o estado de acesso. A fonte está marcada como `metadata_registered_file_not_downloaded`: não é apresentada como se já existisse um ficheiro NASA local. As unidades e os atributos do ficheiro serão confirmados quando o ficheiro real for disponibilizado através do Earthdata.
+
+## Passo 8: validar um ficheiro científico
+
+Endpoint:
+
+```text
+POST /data/validate?variable_name=precipitationCal
+```
+
+O endpoint recebe um ficheiro `.nc`, `.nc4` ou `.netcdf` e valida a variável, a dimensão temporal, as unidades, a resolução das coordenadas, o número de linhas e os valores ausentes. O ficheiro é usado temporariamente durante a validação e não é guardado permanentemente.
