@@ -37,6 +37,28 @@ GET /regions
 
 A resposta inclui Angola, a capital nacional, o código do país, as 21 províncias e as respetivas capitais administrativas. A lista segue o [Portal Oficial do Governo de Angola](https://governo.gov.ao/angola/provincias).
 
+## Passo 4: configurar uma investigação
+
+Endpoint:
+
+```text
+POST /investigations
+```
+
+Exemplo de pedido:
+
+```json
+{
+  "country_id": "angola",
+  "province_id": "luanda",
+  "dataset_id": "gpm-imerg",
+  "start_date": "2001-01-01",
+  "end_date": "2020-12-31"
+}
+```
+
+O endpoint confirma a província, a variável ambiental e o período. Devolve uma configuração com estado `configured`. Ainda não descarrega dados nem executa a análise; essa será a etapa seguinte.
+
 ## Executar localmente
 
 A partir da raiz do repositório:
@@ -59,4 +81,4 @@ curl http://127.0.0.1:8000/regions
 pytest -q backend/tests
 ```
 
-O próximo passo será definir parâmetros de investigação, antes de ligar os dados científicos reais.
+O próximo passo será preparar o carregamento de dados e a análise científica.

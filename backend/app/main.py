@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from app.datasets import DATASETS, DatasetRecord
 from app.regions import ANGOLA, OFFICIAL_SOURCE, PROVINCES, CountryRecord, ProvinceRecord
+from app.investigations import InvestigationRecord, InvestigationRequest, create_investigation
 
 
 API_VERSION = "0.1.0"
@@ -37,3 +38,12 @@ def regions() -> dict[str, CountryRecord | list[ProvinceRecord] | str]:
         "provinces": PROVINCES,
         "source": OFFICIAL_SOURCE,
     }
+
+
+@app.post("/investigations", response_model=InvestigationRecord, tags=["investigations"])
+def investigations(request: InvestigationRequest) -> InvestigationRecord:
+    """Valida e cria a configuração de uma investigação ambiental."""
+    try:
+        return create_investigation(request)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
