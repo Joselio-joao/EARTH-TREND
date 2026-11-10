@@ -11,6 +11,7 @@ from app.analysis.trend_analysis import Observation, analyze_trend
 from app.data.sources import SCIENTIFIC_SOURCES, ScientificSource
 from app.data.validate_data import validate_netcdf
 from app.data.load_data import load_netcdf_timeseries
+from app.results import get_result, list_results, store_result, StoredResult
 
 
 API_VERSION = "0.1.0"
@@ -78,6 +79,21 @@ class ScientificAnalyzeResponse(AnalyzeResponse):
     validation_warnings: list[str]
 
 
+@app.get("/results", tags=["results"])
+def results(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, list[StoredResult]]:
+    """Lista os resultados mantidos temporariamente em memória."""
+    return {"results": list_results(limit)}
+
+
+@app.get("/results/{result_id}", response_model=StoredResult, tags=["results"])
+def result_by_id(result_id: str) -> StoredResult:
+    """Obtém um resultado pelo identificador devolvido pela análise."""
+    result = get_result(result_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Resultado não encontrado.")
+    return result
+
+
 @app.post("/data/validate", response_model=DataValidationResponse, tags=["data"])
 async def validate_data_file(
     file: UploadFile = File(...),
@@ -125,32 +141,34 @@ async def analyze_scientific_file(
         if len(loaded.observations) < 3:
             raise ValueError("O ficheiro precisa de pelo menos 3 observações temporais válidas.")
         result = analyze_trend(loaded.observations)
-        return ScientificAnalyzeResponse(
-            investigation_id=investigation_id,
-            data_origin="scientific_dataset",
-            unit=validation.units or "unidade não declarada",
-            n_observations=result.n_observations,
-            slope_per_year=result.slope_per_year,
-            sen_slope_per_year=result.sen_slope_per_year,
-            r_squared=result.r_squared,
-            mann_kendall_s=result.mann_kendall_s,
-            mann_kendall_z=result.mann_kendall_z,
-            p_value=result.p_value,
-            direction=result.direction,
-            statistically_significant=result.statistically_significant,
-            limitations=[
+        analysis_payload = {
+            "investigation_id": investigation_id,
+            "data_origin": "scientific_dataset",
+            "unit": validation.units or "unidade não declarada",
+            "n_observations": result.n_observations,
+            "slope_per_year": result.slope_per_year,
+            "sen_slope_per_year": result.sen_slope_per_year,
+            "r_squared": result.r_squared,
+            "mann_kendall_s": result.mann_kendall_s,
+            "mann_kendall_z": result.mann_kendall_z,
+            "p_value": result.p_value,
+            "direction": result.direction,
+            "statistically_significant": result.statistically_significant,
+            "limitations": [
                 "Uma tendência estatística não demonstra causalidade.",
                 "A série representa a média das dimensões espaciais do ficheiro.",
                 "Confirmar escala, fator de conversão e indicadores de qualidade no produto original.",
             ],
-            filename=file.filename,
-            variable=variable_name,
-            source_format=loaded.source_format,
-            rows_read=loaded.rows_read,
-            rows_dropped=loaded.rows_dropped,
-            missing_values_removed=loaded.missing_values_removed,
-            validation_warnings=validation.warnings,
-        )
+            "filename": file.filename,
+            "variable": variable_name,
+            "source_format": loaded.source_format,
+            "rows_read": loaded.rows_read,
+            "rows_dropped": loaded.rows_dropped,
+            "missing_values_removed": loaded.missing_values_removed,
+            "validation_warnings": validation.warnings,
+        }
+        stored = store_result(analysis_payload)
+        return ScientificAnalyzeResponse(result_id=stored.result_id, **analysis_payload)
     except (OSError, ValueError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     finally:
@@ -177,22 +195,24 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
-    return AnalyzeResponse(
-        investigation_id=request.investigation_id,
-        data_origin=request.data_origin,
-        unit=request.unit,
-        n_observations=result.n_observations,
-        slope_per_year=result.slope_per_year,
-        sen_slope_per_year=result.sen_slope_per_year,
-        r_squared=result.r_squared,
-        mann_kendall_s=result.mann_kendall_s,
-        mann_kendall_z=result.mann_kendall_z,
-        p_value=result.p_value,
-        direction=result.direction,
-        statistically_significant=result.statistically_significant,
-        limitations=[
+    analysis_payload = {
+        "investigation_id": request.investigation_id,
+        "data_origin": request.data_origin,
+        "unit": request.unit,
+        "n_observations": result.n_observations,
+        "slope_per_year": result.slope_per_year,
+        "sen_slope_per_year": result.sen_slope_per_year,
+        "r_squared": result.r_squared,
+        "mann_kendall_s": result.mann_kendall_s,
+        "mann_kendall_z": result.mann_kendall_z,
+        "p_value": result.p_value,
+        "direction": result.direction,
+        "statistically_significant": result.statistically_significant,
+        "limitations": [
             "Uma tendência estatística não demonstra causalidade.",
             "A interpretação depende da qualidade, cobertura e resolução dos dados.",
             "Dados synthetic_test são apenas para validação do algoritmo e não representam dados NASA.",
         ],
-    )
+    }
+    stored = store_result(analysis_payload)
+    return AnalyzeResponse(result_id=stored.result_id, **analysis_payload)

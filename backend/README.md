@@ -119,3 +119,14 @@ POST /data/analyze?investigation_id=...&variable_name=precipitationCal
 ```
 
 Esta rota executa a validação, carrega a série temporal, agrega as dimensões espaciais por média e envia as observações para o motor de tendências. O resultado fica marcado como `scientific_dataset`. O ficheiro continua temporário e não é guardado permanentemente.
+
+## Passo 10: consultar resultados
+
+Os resultados recebem um identificador próprio e podem ser consultados enquanto o processo do backend estiver ativo:
+
+```text
+GET /results
+GET /results/{result_id}
+```
+
+Este armazenamento é temporário e fica em memória. Reiniciar o backend elimina os resultados; uma base de dados será considerada numa etapa posterior, quando a estrutura científica estiver estabilizada.

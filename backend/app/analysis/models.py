@@ -17,6 +17,7 @@ class AnalyzeRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
+    result_id: str
     investigation_id: str
     data_origin: str
     unit: str
