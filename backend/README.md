@@ -130,3 +130,13 @@ GET /results/{result_id}
 ```
 
 Este armazenamento é temporário e fica em memória. Reiniciar o backend elimina os resultados; uma base de dados será considerada numa etapa posterior, quando a estrutura científica estiver estabilizada.
+
+## Passo 11: relatório HTML
+
+Endpoint:
+
+```text
+GET /report/{result_id}
+```
+
+O relatório reúne a origem dos dados, configuração, metodologia, métricas, limitações e avisos de validação. A resposta é HTML imprimível e pode ser guardada pelo navegador como PDF. Não apresenta causalidade nem inventa informação que não esteja no resultado.

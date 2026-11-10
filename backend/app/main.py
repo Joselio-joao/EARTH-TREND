@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from tempfile import NamedTemporaryFile
 from pathlib import Path
@@ -12,6 +13,7 @@ from app.data.sources import SCIENTIFIC_SOURCES, ScientificSource
 from app.data.validate_data import validate_netcdf
 from app.data.load_data import load_netcdf_timeseries
 from app.results import get_result, list_results, store_result, StoredResult
+from app.reports import render_report
 
 
 API_VERSION = "0.1.0"
@@ -92,6 +94,15 @@ def result_by_id(result_id: str) -> StoredResult:
     if result is None:
         raise HTTPException(status_code=404, detail="Resultado não encontrado.")
     return result
+
+
+@app.get("/report/{result_id}", response_class=HTMLResponse, tags=["reports"])
+def report(result_id: str) -> HTMLResponse:
+    """Gera uma versão HTML imprimível do resultado registado."""
+    result = get_result(result_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Resultado não encontrado.")
+    return HTMLResponse(content=render_report(result))
 
 
 @app.post("/data/validate", response_model=DataValidationResponse, tags=["data"])
