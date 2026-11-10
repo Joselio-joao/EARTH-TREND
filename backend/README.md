@@ -57,7 +57,32 @@ Exemplo de pedido:
 }
 ```
 
-O endpoint confirma a província, a variável ambiental e o período. Devolve uma configuração com estado `configured`. Ainda não descarrega dados nem executa a análise; essa será a etapa seguinte.
+O endpoint confirma a província, a variável ambiental e o período. Devolve uma configuração com estado `configured`. Ainda não descarrega dados nem executa a análise.
+
+## Passo 5: motor de tendências
+
+Endpoint:
+
+```text
+POST /analyze
+```
+
+O pedido recebe uma série temporal de observações e exige a origem dos dados:
+
+```json
+{
+  "investigation_id": "inv-test-001",
+  "data_origin": "synthetic_test",
+  "unit": "mm/ano",
+  "observations": [
+    {"date": "2000-01-01", "value": 10},
+    {"date": "2001-01-01", "value": 12},
+    {"date": "2002-01-01", "value": 14}
+  ]
+}
+```
+
+O motor calcula regressão linear, R², inclinação de Sen e Mann–Kendall. Os dados `synthetic_test` servem apenas para validar o algoritmo; não são apresentados como dados NASA. A ligação a ficheiros científicos reais será feita no passo seguinte.
 
 ## Executar localmente
 
@@ -81,4 +106,4 @@ curl http://127.0.0.1:8000/regions
 pytest -q backend/tests
 ```
 
-O próximo passo será preparar o carregamento de dados e a análise científica.
+O próximo passo será criar o carregador para dados científicos reais, começando pelo formato de amostra GPM IMERG.
