@@ -89,3 +89,13 @@ pytest -q backend/tests
 ```
 
 O próximo passo será ligar um ficheiro científico real ao carregador e confirmar unidades, qualidade e cobertura temporal.
+
+## Passo 7: manifesto GPM IMERG
+
+Endpoint de fontes científicas:
+
+```text
+GET /data-sources
+```
+
+O manifesto regista o GPM IMERG Final Daily V07, os formatos documentados, as opções temporais, a resolução espacial e o estado de acesso. A fonte está marcada como `metadata_registered_file_not_downloaded`: não é apresentada como se já existisse um ficheiro NASA local. As unidades e os atributos do ficheiro serão confirmados quando o ficheiro real for disponibilizado através do Earthdata.
