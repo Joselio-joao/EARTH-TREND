@@ -45,18 +45,6 @@ Endpoint:
 POST /investigations
 ```
 
-Exemplo de pedido:
-
-```json
-{
-  "country_id": "angola",
-  "province_id": "luanda",
-  "dataset_id": "gpm-imerg",
-  "start_date": "2001-01-01",
-  "end_date": "2020-12-31"
-}
-```
-
 O endpoint confirma a província, a variável ambiental e o período. Devolve uma configuração com estado `configured`. Ainda não descarrega dados nem executa a análise.
 
 ## Passo 5: motor de tendências
@@ -67,22 +55,16 @@ Endpoint:
 POST /analyze
 ```
 
-O pedido recebe uma série temporal de observações e exige a origem dos dados:
+O motor calcula regressão linear, R², inclinação de Sen e Mann–Kendall. Os dados `synthetic_test` servem apenas para validar o algoritmo; não são apresentados como dados NASA.
 
-```json
-{
-  "investigation_id": "inv-test-001",
-  "data_origin": "synthetic_test",
-  "unit": "mm/ano",
-  "observations": [
-    {"date": "2000-01-01", "value": 10},
-    {"date": "2001-01-01", "value": 12},
-    {"date": "2002-01-01", "value": 14}
-  ]
-}
-```
+## Passo 6: carregador de dados científicos
 
-O motor calcula regressão linear, R², inclinação de Sen e Mann–Kendall. Os dados `synthetic_test` servem apenas para validar o algoritmo; não são apresentados como dados NASA. A ligação a ficheiros científicos reais será feita no passo seguinte.
+O módulo `app/data/load_data.py` lê dois formatos comuns em dados ambientais:
+
+- CSV, com colunas de data e valor configuráveis;
+- NetCDF, identificando uma variável temporal e calculando a média das dimensões espaciais.
+
+O carregador normaliza as observações para o mesmo formato usado pelo motor estatístico. Datas e valores inválidos são removidos e contabilizados. Observações repetidas no mesmo dia são agregadas pela média. O carregador não assume que todos os produtos NASA têm as mesmas unidades, nomes de variáveis ou resolução; esses metadados devem ser confirmados por produto antes da análise.
 
 ## Executar localmente
 
@@ -106,4 +88,4 @@ curl http://127.0.0.1:8000/regions
 pytest -q backend/tests
 ```
 
-O próximo passo será criar o carregador para dados científicos reais, começando pelo formato de amostra GPM IMERG.
+O próximo passo será ligar um ficheiro científico real ao carregador e confirmar unidades, qualidade e cobertura temporal.
