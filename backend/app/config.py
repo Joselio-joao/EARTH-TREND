@@ -27,6 +27,8 @@ class Settings:
     min_years: int = 10            # anos mínimos com dados para concluir uma tendência
     max_values: int = 20_000_000   # células x passos de tempo que um pedido pode carregar
     max_concurrent: int = 2        # análises em paralelo (protege a memória do servidor)
+    ee_project_id: str = ""
+    ee_service_account_json: str = ""
 
     @property
     def raw_dir(self):
@@ -50,4 +52,6 @@ class Settings:
         s.min_years = int(env.get("EARTHTREND_MIN_YEARS", s.min_years))
         s.max_values = int(env.get("EARTHTREND_MAX_VALUES", s.max_values))
         s.max_concurrent = int(env.get("EARTHTREND_MAX_CONCURRENT", s.max_concurrent))
+        s.ee_project_id = env.get("EARTHTREND_EE_PROJECT_ID", "").strip()
+        s.ee_service_account_json = env.get("EARTHTREND_EE_SERVICE_ACCOUNT_JSON", "")
         return s
