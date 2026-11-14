@@ -1,36 +1,125 @@
-const K='earthtrend-state-v2',D={region:'Angola',variable:'Precipitação',period:'2015–2025',aggregation:'Anual',method:'Mann–Kendall + Sen’s slope',question:'A precipitação apresenta uma tendência persistente em Angola?',investigations:[]};
-const S={...D,...JSON.parse(localStorage.getItem(K)||'{}')};const M={'Precipitação':{unit:'mm/ano',source:'NASA GPM IMERG',direction:'Aumento',slope:'+2,4 mm/ano',p:'0,032',n:'132',note:'A série demonstra um aumento estimado. Esta amostra não prova causalidade.'},'Vegetação (NDVI)':{unit:'NDVI/ano',source:'NASA MODIS',direction:'Diminuição',slope:'−0,006 /ano',p:'0,118',n:'180',note:'A direção é negativa, mas a amostra não tem evidência estatística suficiente.'},'Temperatura superficial':{unit:'°C/ano',source:'NASA GISTEMP',direction:'Aumento',slope:'+0,021 °C/ano',p:'0,018',n:'420',note:'Tendência positiva; a resolução global limita a interpretação local.'}};
-const $=id=>document.getElementById(id),save=()=>localStorage.setItem(K,JSON.stringify(S));function toast(x){let t=$('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.append(t)}t.textContent=x;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
-function sync(){document.querySelectorAll('[data-state]').forEach(e=>{if(S[e.dataset.state]!=null)e.value=S[e.dataset.state];e.onchange=()=>{S[e.dataset.state]=e.value;save();render()}})}function render(){let m=M[S.variable]||M['Precipitação'];document.querySelectorAll('[data-bind]').forEach(e=>{let k=e.dataset.bind,v=k==='region'?S.region:k==='variable'?S.variable:k==='period'?S.period:k==='unit'?m.unit:k==='source'?m.source:k==='direction'?m.direction:k==='slope'?m.slope:k==='p'?m.p:k==='n'?m.n:k==='note'?m.note:e.textContent;e.textContent=v});let c=$('trendChart');if(c){let a=m.direction==='Diminuição'?[65,62,60,63,57,55,58,52,49,50,46]:[42,45,43,49,51,48,56,58,57,64,68],min=Math.min(...a),max=Math.max(...a),p=a.map((v,i)=>`${i*10},${90-(v-min)/(max-min)*65}`).join(' ');c.innerHTML=`<polyline points="${p}" fill="none" stroke="#315fe8" stroke-width="2.8" vector-effect="non-scaling-stroke"/><polyline points="0,84 100,18" fill="none" stroke="#75b64f" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>`}}
-function prepare(){document.querySelectorAll('[data-state]').forEach(e=>S[e.dataset.state]=e.value);save();render();if($('analysis-note'))$('analysis-note').hidden=false;toast('Análise demonstrativa atualizada.')}function add(){let name=$('iname')?.value.trim()||`Análise de ${S.variable} em ${S.region}`;S.investigations=[{name,region:S.region,variable:S.variable,period:S.period,stage:'Pergunta definida'},...(S.investigations||[])];save();rows();toast('Investigação guardada neste dispositivo.')}function rows(){let b=$('investigationRows');if(!b)return;b.innerHTML=[{name:'Exploração inicial (amostra)',region:'Angola',variable:'Precipitação',period:'2015–2025',stage:'Pergunta definida'},...(S.investigations||[])].map(x=>`<tr><td class="datasetname">${x.name}</td><td>${x.region}</td><td>${x.variable}</td><td>${x.period}</td><td><span class="pill gray">${x.stage}</span></td></tr>`).join('')}
-function exportReport(){let m=M[S.variable]||M['Precipitação'],txt=`EARTH TREND AI — RELATÓRIO\n\nPergunta: ${S.question}\nRegião: ${S.region}\nVariável: ${S.variable}\nPeríodo: ${S.period}\nAgregação: ${S.aggregation}\nFonte: ${m.source}\nMétodo: ${S.method}\n\nDireção: ${m.direction}\nMagnitude: ${m.slope}\nValor-p: ${m.p}\nObservações: ${m.n}\n\nInterpretação: ${m.note}\n\nLimitações: amostra demonstrativa; validar unidades, qualidade, sazonalidade, autocorrelação, cobertura e causalidade antes de comunicar conclusões.`;let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download='earthtrend-relatorio.txt';a.click();toast('Relatório exportado.')}document.addEventListener('DOMContentLoaded',()=>{sync();render();rows();document.querySelectorAll('[data-action="prepare"]').forEach(b=>b.onclick=prepare);document.querySelectorAll('[data-action="add-investigation"]').forEach(b=>b.onclick=add);document.querySelectorAll('[data-action="export"]').forEach(b=>b.onclick=exportReport);document.querySelectorAll('[data-action="print"]').forEach(b=>b.onclick=()=>print())});// Compatibilidade com o markup inicial do protótipo.
-function addInvestigation(){
-  const oldRegion=document.getElementById('iregion'), oldTheme=document.getElementById('itheme');
-  if(oldRegion) S.region=oldRegion.value;
-  if(oldTheme) S.variable=oldTheme.value==='Vegetation'?'Vegetação (NDVI)':oldTheme.value==='Climate'?'Temperatura superficial':'Precipitação';
-  add();
-}
-document.addEventListener('DOMContentLoaded',()=>{
-  const region=document.getElementById('region');
-  if(region){region.value=S.region;region.addEventListener('change',()=>{S.region=region.value;save();render()});const b=[...document.querySelectorAll('button')].find(x=>/save study area/i.test(x.textContent));if(b)b.onclick=()=>{S.region=region.value;save();toast('Área de estudo guardada. Continua no Trend Lab.')}}
-  const buttons=[...document.querySelectorAll('button')];const prepareButton=buttons.find(x=>/prepare analysis/i.test(x.textContent));
-  if(prepareButton)prepareButton.onclick=()=>{const selects=document.querySelectorAll('main .panel select');if(selects[0])S.region=selects[0].value;if(selects[1])S.variable=selects[1].value.includes('Vegetation')?'Vegetação (NDVI)':selects[1].value.includes('temperature')?'Temperatura superficial':'Precipitação';save();toast('Configuração guardada. Verifica o dataset antes de interpretar.');const n=document.getElementById('analysis-note');if(n)n.hidden=false;render()}
-});
-
-// Preferências globais da aplicação: idioma, mapa e gráfico.
-const PREF_KEY='earthtrend-preferences-v1';
-const P=Object.assign({language:'pt',mapType:'Relief',chartType:'Linha',compactMode:false},JSON.parse(localStorage.getItem(PREF_KEY)||'{}'));
-const I18N={pt:{'settings.title':'Configurações','settings.subtitle':'Personaliza a forma como investigas o sistema Terra.','settings.language':'Idioma da interface','settings.map':'Tipo de mapa predefinido','settings.chart':'Tipo de gráfico predefinido','settings.save':'Guardar preferências','settings.saved':'Preferências guardadas neste dispositivo.','settings.appearance':'Visualização','settings.compact':'Modo compacto','settings.scientific':'As preferências alteram a apresentação, não os cálculos científicos.'},en:{'settings.title':'Settings','settings.subtitle':'Personalize how you investigate the Earth system.','settings.language':'Interface language','settings.map':'Default map type','settings.chart':'Default chart type','settings.save':'Save preferences','settings.saved':'Preferences saved on this device.','settings.appearance':'Visualization','settings.compact':'Compact mode','settings.scientific':'Preferences change presentation, not scientific calculations.'}};
-function savePrefs(){localStorage.setItem(PREF_KEY,JSON.stringify(P));document.documentElement.lang=P.language==='en'?'en':'pt-PT';document.body.classList.toggle('compact-mode',P.compactMode===true||P.compactMode==='true');document.querySelectorAll('[data-pref]').forEach(e=>{if(P[e.dataset.pref]!=null)e.value=P[e.dataset.pref]});document.querySelectorAll('[data-i18n]').forEach(e=>{const text=I18N[P.language]?.[e.dataset.i18n]||I18N.pt[e.dataset.i18n];if(text)e.textContent=text});}
-function applyMap(){document.querySelectorAll('[data-map-preview]').forEach(e=>{e.classList.remove('map-relief','map-satellite','map-heat','map-contour');e.classList.add('map-'+String(P.mapType).toLowerCase().replaceAll('í','i').replaceAll('é','e').replaceAll(' ','-'));e.dataset.mapLabel=P.mapType});document.querySelectorAll('[data-map-label]').forEach(e=>e.textContent=P.mapType);}
-function drawPreferredChart(){document.querySelectorAll('[data-chart-preview]').forEach(svg=>{let type=P.chartType;let values=[42,48,44,55,52,63,60,70,68,78];if(type==='Barras'){svg.innerHTML=values.map((v,i)=>`<rect x="${i*10+1}" y="${100-v}" width="6" height="${v}" rx="1" fill="#315fe8" opacity=".85"/>`).join('')}else if(type==='Dispersão'){svg.innerHTML=values.map((v,i)=>`<circle cx="${i*10+4}" cy="${100-v}" r="2.2" fill="#315fe8"/>`).join('')}else{let points=values.map((v,i)=>`${i*10+4},${100-v}`).join(' ');svg.innerHTML=`<polyline points="${points}" fill="none" stroke="#315fe8" stroke-width="2.8" vector-effect="non-scaling-stroke"/>`}})}
-function setupSettings(){document.querySelectorAll('[data-pref]').forEach(e=>{e.value=P[e.dataset.pref]||e.value;e.onchange=()=>{P[e.dataset.pref]=e.type==='checkbox'?e.checked:e.value;savePrefs();applyMap();drawPreferredChart()}});document.querySelectorAll('[data-action="save-preferences"]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-pref]').forEach(e=>P[e.dataset.pref]=e.type==='checkbox'?e.checked:e.value);savePrefs();applyMap();drawPreferredChart();toast(I18N[P.language].settings.saved)});savePrefs();applyMap();drawPreferredChart();}
-document.addEventListener('DOMContentLoaded',()=>{setupSettings();const map=document.querySelector('[data-state="mapType"]');const chart=document.querySelector('[data-state="chartType"]');if(map){map.value=P.mapType;map.onchange=()=>{P.mapType=map.value;savePrefs();applyMap()}}if(chart){chart.value=P.chartType;chart.onchange=()=>{P.chartType=chart.value;savePrefs();drawPreferredChart()}}});
-
-function translateNavigation(){
- const en=P.language==='en';
- const labels={
-  'index.html':en?'Overview':'Visão geral','explore.html':en?'Explore Earth':'Explorar a Terra','trend-lab.html':en?'Trend Lab':'Laboratório','data-library.html':en?'Data Library':'Biblioteca de dados','investigate.html':en?'Investigations':'Investigações','methodology.html':en?'Methodology':'Metodologia','about.html':en?'About':'Sobre','settings.html':en?'Settings':'Configurações'};
- document.querySelectorAll('.navlink').forEach(a=>{const key=a.getAttribute('href');if(labels[key]){const icon=a.querySelector('.ico')?.textContent||'';a.textContent='';const i=document.createElement('span');i.className='ico';i.textContent=icon;a.append(i,a.ownerDocument.createTextNode(labels[key]))}});
-}
-const _savePrefs=savePrefs;savePrefs=function(){_savePrefs();translateNavigation()};
+(() => {
+  "use strict";
+  const KEY = "earthtrend-state-v2";
+  const DEFAULTS = {
+    region: "Angola", variable: "Precipitação", period: "2015–2024",
+    aggregation: "Anual", method: "Mann–Kendall + declive de Sen",
+    question: "", investigations: []
+  };
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (_) {}
+  const S = { ...DEFAULTS, ...saved };
+  const $ = id => document.getElementById(id);
+  const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+  function toast(message) {
+    let el = $("toast");
+    if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; document.body.append(el); }
+    el.textContent = message; el.classList.add("show");
+    window.setTimeout(() => el.classList.remove("show"), 2400);
+  }
+  function render() {
+    document.querySelectorAll("[data-bind]").forEach(el => {
+      const key = el.dataset.bind;
+      const value = S[key];
+      el.textContent = value == null || value === "" ? "—" : value;
+    });
+  }
+  function sync() {
+    document.querySelectorAll("[data-state]").forEach(el => {
+      if (S[el.dataset.state] != null) el.value = S[el.dataset.state];
+      el.addEventListener("change", () => {
+        S[el.dataset.state] = el.value; save(); render();
+      });
+    });
+  }
+  function addInvestigation() {
+    const name = $("iname")?.value.trim() || `Análise de ${S.variable} em ${S.region}`;
+    const region = $("iregion")?.value || S.region;
+    const theme = $("itheme")?.value || S.variable;
+    const stage = $("istage")?.value || "Pergunta definida";
+    S.investigations = [{ name, region, variable: theme, stage, createdAt: new Date().toISOString() }, ...(S.investigations || [])];
+    save(); rows(); toast("Investigação guardada neste dispositivo.");
+  }
+  function rows() {
+    const body = $("investigationRows");
+    if (!body) return;
+    body.replaceChildren();
+    (S.investigations || []).forEach(item => {
+      const tr = document.createElement("tr");
+      [item.name, item.region, item.variable, item.stage].forEach(value => {
+        const td = document.createElement("td"); td.textContent = value || "—"; tr.append(td);
+      });
+      body.append(tr);
+    });
+    if (!(S.investigations || []).length) {
+      const tr = document.createElement("tr"), td = document.createElement("td");
+      td.colSpan = 4; td.textContent = "Ainda não existem investigações guardadas.";
+      td.className = "muted"; tr.append(td); body.append(tr);
+    }
+  }
+  function prepare() {
+    document.querySelectorAll("[data-state]").forEach(el => { S[el.dataset.state] = el.value; });
+    save(); render();
+    const note = $("analysis-note");
+    if (note) { note.hidden = false; note.textContent = "Configuração guardada. Para calcular resultados, executa uma análise no Trend Lab. Nenhum valor científico foi gerado nesta página."; }
+    toast("Configuração guardada; ainda sem análise científica.");
+  }
+  function exportReport() {
+    toast("Executa primeiro uma análise no Trend Lab para obter um relatório com resultados reais.");
+  }
+  const PREF_KEY = "earthtrend-preferences-v1";
+  let P = { language: "pt", mapType: "Relief", chartType: "Linha", compactMode: false };
+  try { P = { ...P, ...(JSON.parse(localStorage.getItem(PREF_KEY) || "{}") || {}) }; } catch (_) {}
+  const I18N = {
+    pt: { "settings.title":"Configurações","settings.subtitle":"Personaliza a forma como investigas o sistema Terra.","settings.language":"Idioma da interface","settings.map":"Tipo de mapa predefinido","settings.chart":"Tipo de gráfico predefinido","settings.save":"Guardar preferências","settings.saved":"Preferências guardadas neste dispositivo.","settings.appearance":"Visualização","settings.compact":"Modo compacto","settings.scientific":"As preferências alteram a apresentação, não os cálculos científicos." },
+    en: { "settings.title":"Settings","settings.subtitle":"Personalize how you investigate the Earth system.","settings.language":"Interface language","settings.map":"Default map type","settings.chart":"Default chart type","settings.save":"Save preferences","settings.saved":"Preferences saved on this device.","settings.appearance":"Visualization","settings.compact":"Compact mode","settings.scientific":"Preferences change presentation, not scientific calculations." }
+  };
+  function translateNavigation() {
+    const en = P.language === "en";
+    const labels = { "index.html":en?"Overview":"Visão geral","explore.html":en?"Explore Earth":"Explorar a Terra","trend-lab.html":en?"Trend Lab":"Laboratório","data-library.html":en?"Data Library":"Biblioteca de dados","investigate.html":en?"Investigations":"Investigações","methodology.html":en?"Methodology":"Metodologia","about.html":en?"About":"Sobre","settings.html":en?"Settings":"Configurações" };
+    document.querySelectorAll(".navlink").forEach(a => {
+      const label = labels[a.getAttribute("href")]; if (!label) return;
+      const icon = a.querySelector(".ico")?.textContent || "";
+      a.replaceChildren();
+      const span = document.createElement("span"); span.className = "ico"; span.textContent = icon;
+      a.append(span, document.createTextNode(label));
+    });
+  }
+  function savePrefs() {
+    localStorage.setItem(PREF_KEY, JSON.stringify(P));
+    document.documentElement.lang = P.language === "en" ? "en" : "pt-PT";
+    document.body.classList.toggle("compact-mode", P.compactMode === true || P.compactMode === "true");
+    document.querySelectorAll("[data-pref]").forEach(el => { if (P[el.dataset.pref] != null) el.value = P[el.dataset.pref]; });
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const value = I18N[P.language]?.[el.dataset.i18n] || I18N.pt[el.dataset.i18n];
+      if (value) el.textContent = value;
+    });
+    translateNavigation();
+  }
+  function setupSettings() {
+    document.querySelectorAll("[data-pref]").forEach(el => {
+      el.value = P[el.dataset.pref] ?? el.value;
+      el.addEventListener("change", () => {
+        P[el.dataset.pref] = el.type === "checkbox" ? el.checked : el.value; savePrefs();
+      });
+    });
+    document.querySelectorAll('[data-action="save-preferences"]').forEach(button => button.addEventListener("click", () => {
+      document.querySelectorAll("[data-pref]").forEach(el => { P[el.dataset.pref] = el.type === "checkbox" ? el.checked : el.value; });
+      savePrefs(); toast(I18N[P.language]?.["settings.saved"] || I18N.pt["settings.saved"]);
+    }));
+    savePrefs();
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    sync(); render(); rows(); setupSettings();
+    document.querySelectorAll('[data-action="prepare"]').forEach(button => button.addEventListener("click", prepare));
+    document.querySelectorAll('[data-action="add-investigation"]').forEach(button => button.addEventListener("click", addInvestigation));
+    document.querySelectorAll('[data-action="export"]').forEach(button => button.addEventListener("click", exportReport));
+    document.querySelectorAll('[data-action="print"]').forEach(button => button.addEventListener("click", () => window.print()));
+    const region = $("region");
+    if (region) {
+      region.value = S.region;
+      region.addEventListener("change", () => { S.region = region.value; save(); render(); });
+    }
+  });
+  window.addInvestigation = addInvestigation;
+})();
