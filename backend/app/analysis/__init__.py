@@ -1,1 +1,1 @@
-"""Scientific analysis modules for EarthTrend AI."""
+"""Motor de análise: tendências, grelhas e operações de tempo e unidades."""

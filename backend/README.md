@@ -1,142 +1,94 @@
-# EarthTrend AI — Backend
+# EarthTrend AI, backend
 
-## Passo 1: API mínima
+API em FastAPI com um motor estatístico de tendências. Recebe uma região, um período e uma escala temporal,
+lê dados da NASA que a equipa descarregou, e devolve a direção, a magnitude (declive de Sen com intervalo
+de confiança), a significância (Mann-Kendall), um mapa, a proveniência dos dados e as limitações.
 
-Endpoint de verificação:
+Regra de ouro: **nada é inventado**. Sem dados no servidor a resposta é um erro claro (409), nunca números.
 
-```text
-GET /health
+## Arrancar
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate            # Windows   (macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-## Passo 2: catálogo de variáveis
+Abra http://127.0.0.1:8000/docs para ver e experimentar todos os endpoints.
 
-Endpoint do catálogo ambiental:
+## Primeiro, os dados reais
 
-```text
-GET /datasets
-```
+Coloque os ficheiros descarregados em `data/raw/gpm_imerg_monthly/` e confirme-os com
+`python -m app.data.describe <ficheiro>`. Passo a passo em [`../data/README.md`](../data/README.md).
+`GET /datasets` mostra se o servidor já os encontra (`ready: true`).
 
-O endpoint apresenta as variáveis previstas para a EarthTrend AI, a finalidade de cada investigação, a fonte NASA ou científica associada e o estado atual de integração. Neste momento, o catálogo é informação estruturada; ainda não descarrega dados nem executa análises.
+## Endpoints
 
-Variáveis incluídas:
+| método e caminho | o que faz |
+| --- | --- |
+| `GET /health` | o backend está ativo? |
+| `GET /datasets` | datasets registados, estado, ficheiros encontrados, citação |
+| `GET /regions` | regiões e o tipo de fronteira (`polygon`, `bbox` aproximada ou `missing`) |
+| `POST /analyze` | executa a análise, guarda e devolve o resultado completo |
+| `GET /results` | últimas análises guardadas |
+| `GET /results/{id}` | resultado completo |
+| `GET /results/{id}/map` | grelha do mapa (média no período), pronta para o Leaflet |
+| `GET /results/{id}/trend-map` | tendências estatísticas célula a célula, para colorir o mapa |
+| `GET /results/{id}/series.csv` | série temporal em CSV, para verificar noutra ferramenta |
+| `GET /report/{id}?format=html\|md` | relatório (HTML para imprimir ou guardar como PDF; Markdown) |
 
-- Precipitação — GPM IMERG;
-- Vegetação — MODIS NDVI / EVI;
-- Temperatura — NASA GISTEMP;
-- Humidade do solo — NASA GLDAS;
-- Armazenamento de água terrestre — GRACE / GRACE-FO;
-- Cobertura florestal — MODIS.
+Erros têm sempre a forma `{"error": {"code", "message", "details"}}`.
 
-## Passo 3: regiões de Angola
+## Exemplo
 
-Endpoint das regiões:
-
-```text
-GET /regions
-```
-
-A resposta inclui Angola, a capital nacional, o código do país, as 21 províncias e as respetivas capitais administrativas. A lista segue o [Portal Oficial do Governo de Angola](https://governo.gov.ao/angola/provincias).
-
-## Passo 4: configurar uma investigação
-
-Endpoint:
-
-```text
-POST /investigations
-```
-
-O endpoint confirma a província, a variável ambiental e o período. Devolve uma configuração com estado `configured`. Ainda não descarrega dados nem executa a análise.
-
-## Passo 5: motor de tendências
-
-Endpoint:
-
-```text
+```json
 POST /analyze
+{
+  "dataset_id": "gpm_imerg_monthly",
+  "region_id": "angola",
+  "start": "2015", "end": "2025",
+  "scale": "annual",
+  "question": "A precipitação anual em Angola está a mudar?"
+}
 ```
 
-O motor calcula regressão linear, R², inclinação de Sen e Mann–Kendall. Os dados `synthetic_test` servem apenas para validar o algoritmo; não são apresentados como dados NASA.
+`scale`: `monthly` (Mann-Kendall sazonal sobre os meses), `seasonal` (com `season`: `DJF`, `MAM`, `JJA`, `SON`,
+ou `season_months`, por exemplo `[10,11,12,1,2,3,4]`), `annual` ou `native`.
+Em vez de `region_id` pode enviar `bbox`: `{"lat_min","lat_max","lon_min","lon_max"}`.
+Para pedir o mapa estatístico por célula, envie `include_trend_map: true`. O cálculo é opcional para manter o pedido
+normal mais leve; a grelha é reduzida a no máximo 40 células por lado e devolve direção, declive de Sen, valor-p,
+significância e número de observações por célula.
 
-## Passo 6: carregador de dados científicos
+Partes principais da resposta: `trend` (`direction`, `significant`, `mann_kendall`, `magnitude`, `ols`),
+`series` (`labels`, `values`, `trend_line`), `map`, `interpretation`, `data_quality`, `provenance`,
+`warnings`, `limitations`. Os campos sem dados a sustentá-los vêm a `null`.
 
-O módulo `app/data/load_data.py` lê dois formatos comuns em dados ambientais:
+## Como o resultado é calculado
 
-- CSV, com colunas de data e valor configuráveis;
-- NetCDF, identificando uma variável temporal e calculando a média das dimensões espaciais.
+1. Lê só a região e o período pedidos (NetCDF/HDF5 com xarray, ou um CSV já agregado).
+2. Confere as unidades pelo atributo `units` do ficheiro. Unidade desconhecida: recusa (422).
+3. Converte taxa média do mês em total do mês (mm/dia ou mm/h vezes os dias reais do mês).
+4. Agrega em meses, épocas ou anos. Janelas com meses em falta são excluídas, nunca preenchidas.
+5. Média espacial ponderada por cos(latitude), só nas células da região (caixa ou contorno oficial).
+6. Mann-Kendall com correção de empates (sazonal na escala mensal), declive de Sen com intervalo de
+   confiança (Gilbert, 1987) e regressão linear só para comparação. Menos de 10 anos com dados: inconclusivo.
+7. Avisos de qualidade: dados em falta, série curta, valores repetidos, autocorrelação dos resíduos.
 
-O carregador normaliza as observações para o mesmo formato usado pelo motor estatístico. Datas e valores inválidos são removidos e contabilizados. Observações repetidas no mesmo dia são agregadas pela média. O carregador não assume que todos os produtos NASA têm as mesmas unidades, nomes de variáveis ou resolução; esses metadados devem ser confirmados por produto antes da análise.
-
-## Executar localmente
-
-A partir da raiz do repositório:
+## Testes
 
 ```bash
-python3 -m venv backend/.venv
-source backend/.venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn app.main:app --app-dir backend --reload
+python -m unittest discover -s tests -v        # não precisa de pytest
 ```
 
-A API fica disponível em `http://127.0.0.1:8000`.
+Os testes do motor, dos dados, do pipeline e do serviço usam apenas numpy e scipy. Os de HTTP
+(`tests/test_api.py`) e os de leitura de NetCDF (`tests/test_data.py`) correm quando `fastapi`, `httpx`
+e `xarray` estão instalados (`pip install -r requirements-dev.txt`). Os dados dos testes são sintéticos e
+nunca saem dos testes.
 
-## Validar
+## Publicar
 
-```bash
-curl http://127.0.0.1:8000/health
-curl http://127.0.0.1:8000/datasets
-curl http://127.0.0.1:8000/regions
-pytest -q backend/tests
-```
-
-O próximo passo será ligar um ficheiro científico real ao carregador e confirmar unidades, qualidade e cobertura temporal.
-
-## Passo 7: manifesto GPM IMERG
-
-Endpoint de fontes científicas:
-
-```text
-GET /data-sources
-```
-
-O manifesto regista o GPM IMERG Final Daily V07, os formatos documentados, as opções temporais, a resolução espacial e o estado de acesso. A fonte está marcada como `metadata_registered_file_not_downloaded`: não é apresentada como se já existisse um ficheiro NASA local. As unidades e os atributos do ficheiro serão confirmados quando o ficheiro real for disponibilizado através do Earthdata.
-
-## Passo 8: validar um ficheiro científico
-
-Endpoint:
-
-```text
-POST /data/validate?variable_name=precipitationCal
-```
-
-O endpoint recebe um ficheiro `.nc`, `.nc4` ou `.netcdf` e valida a variável, a dimensão temporal, as unidades, a resolução das coordenadas, o número de linhas e os valores ausentes. O ficheiro é usado temporariamente durante a validação e não é guardado permanentemente.
-
-## Passo 9: análise de um ficheiro validado
-
-Endpoint:
-
-```text
-POST /data/analyze?investigation_id=...&variable_name=precipitationCal
-```
-
-Esta rota executa a validação, carrega a série temporal, agrega as dimensões espaciais por média e envia as observações para o motor de tendências. O resultado fica marcado como `scientific_dataset`. O ficheiro continua temporário e não é guardado permanentemente.
-
-## Passo 10: consultar resultados
-
-Os resultados recebem um identificador próprio e podem ser consultados enquanto o processo do backend estiver ativo:
-
-```text
-GET /results
-GET /results/{result_id}
-```
-
-Este armazenamento é temporário e fica em memória. Reiniciar o backend elimina os resultados; uma base de dados será considerada numa etapa posterior, quando a estrutura científica estiver estabilizada.
-
-## Passo 11: relatório HTML
-
-Endpoint:
-
-```text
-GET /report/{result_id}
-```
-
-O relatório reúne a origem dos dados, configuração, metodologia, métricas, limitações e avisos de validação. A resposta é HTML imprimível e pode ser guardada pelo navegador como PDF. Não apresenta causalidade nem inventa informação que não esteja no resultado.
+Comando de arranque: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, com a pasta `backend` como raiz.
+Defina `EARTHTREND_ALLOWED_ORIGINS` (o endereço do site) e `EARTHTREND_DATA_DIR` (onde estão os dados);
+ver `.env.example`. Confirmem os limites de memória e de disco do serviço escolhido antes da demonstração.

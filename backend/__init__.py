@@ -1,1 +1,0 @@
-"""EarthTrend AI backend package."""

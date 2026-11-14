@@ -1,1 +1,1 @@
-"""Scientific data loading utilities for EarthTrend AI."""
+"""Catálogo de datasets e regiões e leitura dos dados descarregados."""

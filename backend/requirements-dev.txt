@@ -1,0 +1,5 @@
+-r requirements.txt
+httpx>=0.27
+pytest>=8
+# opcional: comparar os resultados com uma implementação independente (manual, passo 3.6)
+pymannkendall>=1.4

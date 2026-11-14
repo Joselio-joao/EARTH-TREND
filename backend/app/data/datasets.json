@@ -1,0 +1,70 @@
+{
+  "datasets": [
+    {
+      "id": "gpm_imerg_monthly",
+      "name": "NASA GPM IMERG Final Run, mensal (nível 3, V07)",
+      "family": "GPM IMERG",
+      "variable_id": "precipitation",
+      "variable_label": "Precipitação",
+      "status": "available",
+      "provider": "NASA GES DISC",
+      "version": "V07 (a 07B é a versão corrente segundo o GES DISC)",
+      "product_short_name": "GPM_3IMERGM",
+      "product_url": "https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary",
+      "doi": "10.5067/GPM/IMERG/3B-MONTH/07",
+      "citation": "Huffman, G.J., E.F. Stocker, D.T. Bolvin, E.J. Nelkin, J. Tan (2023), GPM IMERG Final Precipitation L3 1 month 0.1 degree x 0.1 degree V07 (GPM_3IMERGM), Greenbelt, MD, NASA GES DISC. https://doi.org/10.5067/GPM/IMERG/3B-MONTH/07",
+      "license": "Dados do governo dos EUA (https://www.usa.gov/government-works)",
+      "variable": "precipitation",
+      "group": null,
+      "value_kind": "mean_rate",
+      "native_unit": "mm/day",
+      "accepted_units": ["mm/day", "mm/hr"],
+      "resolution": "monthly",
+      "spatial_resolution_deg": 0.1,
+      "valid_min": 0,
+      "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
+      "coverage_note": "Junho de 2000 até ao presente, com cerca de 4 meses de atraso (Final Run).",
+      "limitations": [
+        "As estimativas de precipitação por satélite têm menor desempenho em zonas costeiras e em terreno complexo (documentação do IMERG).",
+        "A constelação de satélites muda ao longo do tempo (TRMM até maio de 2014, GPM Core depois) e isso pode introduzir artefactos em estudos de tendências de vários anos (documentação do IMERG)."
+      ],
+      "to_confirm": [
+        "Confirmar no atributo 'units' dos ficheiros descarregados que a variável 'precipitation' é a taxa média mensal em mm/dia (V07). O backend usa a unidade declarada no ficheiro e recusa unidades desconhecidas.",
+        "Confirmar se a variável está na raiz do ficheiro ou no grupo 'Grid': python -m app.data.describe <ficheiro>."
+      ]
+    },
+    {
+      "id": "modis_ndvi",
+      "name": "NASA MODIS NDVI / EVI",
+      "family": "MODIS",
+      "variable_id": "ndvi",
+      "variable_label": "Vegetação (NDVI)",
+      "status": "planned",
+      "provider": "NASA LP DAAC",
+      "product_url": "https://modis.gsfc.nasa.gov/data/",
+      "note": "Planeado: ainda não ligado ao backend. Escolher o produto (resolução e escala temporal) antes de o registar aqui."
+    },
+    {
+      "id": "gistemp",
+      "name": "NASA GISTEMP",
+      "family": "GISTEMP",
+      "variable_id": "surface_temperature",
+      "variable_label": "Temperatura superficial",
+      "status": "planned",
+      "provider": "NASA GISS",
+      "product_url": "https://data.giss.nasa.gov/gistemp/",
+      "note": "Planeado: ainda não ligado ao backend. O GISTEMP é uma análise de anomalias de temperatura com resolução espacial grosseira; confirmar se serve para escala local."
+    },
+    {
+      "id": "gldas",
+      "name": "NASA GLDAS",
+      "family": "GLDAS",
+      "variable_id": "soil_moisture",
+      "variable_label": "Humidade do solo",
+      "status": "planned",
+      "provider": "NASA GES DISC",
+      "product_url": "https://ldas.gsfc.nasa.gov/gldas",
+      "note": "Planeado: ainda não ligado ao backend. Dados modelados, não observações diretas."
+    }
+  ]
+}

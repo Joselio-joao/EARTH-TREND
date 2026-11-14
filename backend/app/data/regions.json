@@ -1,0 +1,43 @@
+{
+  "regions": [
+    {
+      "id": "angola",
+      "name": "Angola",
+      "bbox": {"lat_min": -18.1, "lat_max": -4.3, "lon_min": 11.6, "lon_max": 24.1},
+      "note": "Caixa delimitadora aproximada: inclui oceano e partes de países vizinhos. Para analisar só o território angolano, coloque o contorno oficial em data/regions/angola.geojson (ver data/README.md)."
+    },
+    {
+      "id": "luanda",
+      "name": "Luanda, Angola",
+      "aliases": ["Luanda"],
+      "bbox": null,
+      "note": "Precisa do contorno da província em data/regions/luanda.geojson (ver data/README.md)."
+    },
+    {
+      "id": "namibe",
+      "name": "Namibe, Angola",
+      "aliases": ["Namibe"],
+      "bbox": null,
+      "note": "Precisa do contorno da província em data/regions/namibe.geojson (ver data/README.md)."
+    },
+    {
+      "id": "huila",
+      "name": "Huíla, Angola",
+      "aliases": ["Huíla", "Huila"],
+      "bbox": null,
+      "note": "Precisa do contorno da província em data/regions/huila.geojson (ver data/README.md)."
+    },
+    {
+      "id": "africa_austral",
+      "name": "África Austral",
+      "bbox": {"lat_min": -35.0, "lat_max": -5.0, "lon_min": 10.0, "lon_max": 41.0},
+      "note": "Caixa aproximada (inclui Angola, Zâmbia, Zimbabué, Moçambique, Namíbia, Botsuana e África do Sul, entre outros). Ajuste à definição de África Austral que o projeto adotar."
+    },
+    {
+      "id": "global",
+      "name": "Global",
+      "bbox": {"lat_min": -90.0, "lat_max": 90.0, "lon_min": -180.0, "lon_max": 180.0},
+      "note": "Demasiado grande para produtos a 0,1 grau como o IMERG: o pedido é recusado. Reservado a produtos de menor resolução."
+    }
+  ]
+}
