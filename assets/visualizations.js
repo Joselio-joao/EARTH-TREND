@@ -72,7 +72,7 @@
   }
   async function catalogues() {
     const ds=await get("/datasets"), rs=await get("/regions");
-    $("viz-dataset").innerHTML=(ds.datasets||[]).map(d=>'<option value="'+d.id+'" '+(d.ready?"":"disabled")+'>'+d.name+" — "+(d.ready?"dados prontos":d.status==="available"?"sem ficheiros":"planeado")+"</option>").join("");
+    $("viz-dataset").innerHTML=(ds.datasets||[]).map(d=>'<option value="'+d.id+'" '+(d.status==="available"?"":"disabled")+'>'+d.name+" — "+(d.ready?"dados prontos":d.status==="available"?"sem ficheiros":"planeado")+"</option>").join("");
     $("viz-region").innerHTML=(rs.regions||[]).map(r=>'<option value="'+r.id+'" '+(r.ready?"":"disabled")+'>'+r.name+(r.approximate?" (aproximada)":"")+"</option>").join("");
     $("catalogue-note").textContent=(ds.datasets||[]).filter(d=>d.ready).length+" dataset(s) com ficheiros · "+(rs.regions||[]).filter(r=>r.ready).length+" região(ões) utilizáveis.";
   }
