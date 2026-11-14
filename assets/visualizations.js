@@ -9,7 +9,7 @@
     const el = $("viz-status");
     if (el) { el.textContent = message; el.dataset.kind = kind; }
   }
-  const base = () => api.trim().replace(/\\/+$/, "");
+  const base = () => api.trim().replace(/\/+$/, "");
   async function request(path, options) {
     if (!base()) throw new Error("Endereço do backend não configurado.");
     const response = await fetch(base() + path, options || {});
