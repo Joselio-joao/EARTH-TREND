@@ -29,8 +29,12 @@ def create_app(settings=None, loader=None):
     app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins,
                        allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
     registry = Registry.load(settings.config_dir, settings.regions_dir)
-    app.state.service = Service(settings, registry, loader or FileLoader(settings.raw_dir),
-                                ResultStore(settings.results_dir))
+    data_loader = loader or EarthEngineLoader(
+        settings.raw_dir, settings.regions_dir,
+        project_id=settings.ee_project_id,
+        service_account_json=settings.ee_service_account_json,
+    )
+    app.state.service = Service(settings, registry, data_loader, ResultStore(settings.results_dir))
 
     @app.exception_handler(ApiError)
     async def api_error_handler(request, exc):
