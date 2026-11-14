@@ -9,7 +9,7 @@ from . import __version__
 from .api.routes import router
 from .config import Settings
 from .data.registry import Registry
-from .data.sources import FileLoader
+from .data.earth_engine import EarthEngineLoader
 from .errors import ApiError
 from .service import Service
 from .storage import ResultStore
