@@ -41,17 +41,19 @@ class RegistryTests(unittest.TestCase):
             self.reg.dataset("nope")
         self.assertEqual(ctx.exception.status, 404)
 
-    def test_angola_defaults_to_an_approximate_box(self):
-        for key in ("angola", "Angola"):
-            r = self.reg.resolve_region(key)
-            self.assertEqual((r["boundary"], r["approximate"], r["rings"]), ("bbox", True, None))
-        self.assertAlmostEqual(r["bbox"]["lat_max"], -4.3)
+    def test_installed_angola_boundary_is_official_polygon(self):
+        installed = Registry.load(PACKAGE_DATA, Path(__file__).parents[1] / "data" / "regions")
+        for key in ("angola", "Angola", "República de Angola"):
+            r = installed.resolve_region(key)
+            self.assertEqual((r["boundary"], r["approximate"]), ("polygon", False))
+        self.assertLess(r["bbox"]["lat_max"], -4.0)
+        self.assertGreater(r["bbox"]["lon_min"], 10.0)
 
-    def test_provinces_need_an_official_boundary(self):
-        for key in ("luanda", "Luanda, Angola", "Huila", "Huíla, Angola"):
-            with self.assertRaises(ApiError) as ctx:
-                self.reg.resolve_region(key)
-            self.assertEqual((ctx.exception.status, ctx.exception.code), (422, "region_needs_boundary"))
+    def test_installed_provinces_resolve_to_official_polygons(self):
+        installed = Registry.load(PACKAGE_DATA, Path(__file__).parents[1] / "data" / "regions")
+        for key in ("luanda", "Luanda, Angola", "Huila", "Huíla, Angola", "Bengo"):
+            r = installed.resolve_region(key)
+            self.assertEqual((r["boundary"], r["approximate"]), ("polygon", False))
 
     def test_polygon_file_takes_priority_and_gives_the_bbox(self):
         self.regions_dir.mkdir()
@@ -61,7 +63,8 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(r["bbox"], {"lat_min": -9.0, "lat_max": -8.5, "lon_min": 13.0, "lon_max": 14.0})
         by_id = {x["id"]: x for x in self.reg.list_regions()}
         self.assertTrue(by_id["luanda"]["ready"] and not by_id["namibe"]["ready"])
-        self.assertTrue(by_id["angola"]["approximate"])
+        self.assertFalse(by_id["angola"]["approximate"])
+        self.assertEqual(by_id["angola"]["boundary"], "missing")
         self.assertEqual(by_id["namibe"]["boundary"], "missing")
 
     def test_broken_boundary_file_is_reported(self):

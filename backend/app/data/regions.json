@@ -3,40 +3,196 @@
     {
       "id": "angola",
       "name": "Angola",
-      "bbox": {"lat_min": -18.1, "lat_max": -4.3, "lon_min": 11.6, "lon_max": 24.1},
-      "note": "Caixa delimitadora aproximada: inclui oceano e partes de países vizinhos. Para analisar só o território angolano, coloque o contorno oficial em data/regions/angola.geojson (ver data/README.md)."
+      "aliases": [
+        "República de Angola"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM0 composto pelas 18 unidades ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
     },
     {
-      "id": "luanda",
-      "name": "Luanda, Angola",
-      "aliases": ["Luanda"],
+      "id": "bengo",
+      "name": "Bengo, Angola",
+      "aliases": [
+        "Bengo"
+      ],
       "bbox": null,
-      "note": "Precisa do contorno da província em data/regions/luanda.geojson (ver data/README.md)."
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
     },
     {
-      "id": "namibe",
-      "name": "Namibe, Angola",
-      "aliases": ["Namibe"],
+      "id": "benguela",
+      "name": "Benguela, Angola",
+      "aliases": [
+        "Benguela"
+      ],
       "bbox": null,
-      "note": "Precisa do contorno da província em data/regions/namibe.geojson (ver data/README.md)."
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "bie",
+      "name": "Bié, Angola",
+      "aliases": [
+        "Bié"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "cabinda",
+      "name": "Cabinda, Angola",
+      "aliases": [
+        "Cabinda"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "cuando_cubango",
+      "name": "Cuando Cubango, Angola",
+      "aliases": [
+        "Cuando Cubango"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "cuanza_norte",
+      "name": "Cuanza Norte, Angola",
+      "aliases": [
+        "Cuanza Norte"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "cuanza_sul",
+      "name": "Cuanza Sul, Angola",
+      "aliases": [
+        "Cuanza Sul"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "cunene",
+      "name": "Cunene, Angola",
+      "aliases": [
+        "Cunene"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "huambo",
+      "name": "Huambo, Angola",
+      "aliases": [
+        "Huambo"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
     },
     {
       "id": "huila",
       "name": "Huíla, Angola",
-      "aliases": ["Huíla", "Huila"],
+      "aliases": [
+        "Huíla",
+        "Huila"
+      ],
       "bbox": null,
-      "note": "Precisa do contorno da província em data/regions/huila.geojson (ver data/README.md)."
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "luanda",
+      "name": "Luanda, Angola",
+      "aliases": [
+        "Luanda"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "lunda_norte",
+      "name": "Lunda Norte, Angola",
+      "aliases": [
+        "Lunda Norte"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "lunda_sul",
+      "name": "Lunda Sul, Angola",
+      "aliases": [
+        "Lunda Sul"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "malanje",
+      "name": "Malanje, Angola",
+      "aliases": [
+        "Malanje"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "moxico",
+      "name": "Moxico, Angola",
+      "aliases": [
+        "Moxico"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "namibe",
+      "name": "Namibe, Angola",
+      "aliases": [
+        "Namibe"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "uige",
+      "name": "Uíge, Angola",
+      "aliases": [
+        "Uíge",
+        "Uige"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
+    },
+    {
+      "id": "zaire",
+      "name": "Zaire, Angola",
+      "aliases": [
+        "Zaire"
+      ],
+      "bbox": null,
+      "note": "Contorno oficial ADM1 do geoBoundaries AGO-ADM1 simplificado (2021)."
     },
     {
       "id": "africa_austral",
       "name": "África Austral",
-      "bbox": {"lat_min": -35.0, "lat_max": -5.0, "lon_min": 10.0, "lon_max": 41.0},
+      "bbox": {
+        "lat_min": -35.0,
+        "lat_max": -5.0,
+        "lon_min": 10.0,
+        "lon_max": 41.0
+      },
       "note": "Caixa aproximada (inclui Angola, Zâmbia, Zimbabué, Moçambique, Namíbia, Botsuana e África do Sul, entre outros). Ajuste à definição de África Austral que o projeto adotar."
     },
     {
       "id": "global",
       "name": "Global",
-      "bbox": {"lat_min": -90.0, "lat_max": 90.0, "lon_min": -180.0, "lon_max": 180.0},
+      "bbox": {
+        "lat_min": -90.0,
+        "lat_max": 90.0,
+        "lon_min": -180.0,
+        "lon_max": 180.0
+      },
       "note": "Demasiado grande para produtos a 0,1 grau como o IMERG: o pedido é recusado. Reservado a produtos de menor resolução."
     }
   ]

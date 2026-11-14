@@ -8,7 +8,13 @@ from app.data.registry import Registry
 
 REGISTRY = Registry.load(PACKAGE_DATA, "/nao/existe")
 DATASET = REGISTRY.dataset("gpm_imerg_monthly")
-REGION = REGISTRY.resolve_region("angola")
+# Os testes sintéticos usam deliberadamente uma caixa fixa. Assim continuam
+# independentes dos ficheiros geográficos reais instalados em backend/data.
+REGION = {
+    "id": "angola", "name": "Angola",
+    "bbox": {"lat_min": -18.1, "lat_max": -4.3, "lon_min": 11.6, "lon_max": 24.1},
+    "rings": None, "boundary": "bbox", "approximate": True, "note": "fixture sintético",
+}
 
 
 def make_cube(first_year=2005, last_year=2024, rate0=2.0, rate_slope=0.01, unit="mm/day",

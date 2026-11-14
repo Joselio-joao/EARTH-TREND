@@ -61,6 +61,11 @@ Para pedir o mapa estatístico por célula, envie `include_trend_map: true`. O c
 normal mais leve; a grelha é reduzida a no máximo 40 células por lado e devolve direção, declive de Sen, valor-p,
 significância e número de observações por célula.
 
+Os limites ADM1 de Angola estão incluídos em `backend/data/regions/`. A região
+`angola` e as 18 províncias do catálogo usam os GeoJSON oficiais simplificados
+do geoBoundaries; a proveniência e as condições de uso estão documentadas em
+[`backend/data/README.md`](data/README.md).
+
 Partes principais da resposta: `trend` (`direction`, `significant`, `mann_kendall`, `magnitude`, `ols`),
 `series` (`labels`, `values`, `trend_line`), `map`, `interpretation`, `data_quality`, `provenance`,
 `warnings`, `limitations`. Os campos sem dados a sustentá-los vêm a `null`.

@@ -1,4 +1,5 @@
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -33,6 +34,7 @@ class ServiceBase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.settings = Settings(data_dir=Path(self.tmp.name))
+        shutil.copytree(Path(__file__).parents[1] / "data" / "regions", self.settings.regions_dir)
         self.registry = Registry.load(PACKAGE_DATA, self.settings.regions_dir)
         self.loader = FakeLoader()
         self.svc = Service(self.settings, self.registry, self.loader, ResultStore(self.settings.results_dir))
@@ -109,7 +111,7 @@ class Flow(ServiceBase):
         self.assertEqual(by_id["gpm_imerg_monthly"]["files"], {"grid_files": 1, "series_files": 0})
         self.assertEqual((by_id["gistemp"]["ready"], by_id["gistemp"]["status"]), (False, "planned"))
         regions = {r["id"]: r for r in self.svc.list_regions()}
-        self.assertTrue(regions["angola"]["ready"] and not regions["luanda"]["ready"])
+        self.assertTrue(regions["angola"]["ready"] and regions["luanda"]["ready"])
         self.assertEqual(self.svc.health()["status"], "ok")
 
 
@@ -136,7 +138,7 @@ class Validation(ServiceBase):
         self.fails(dict(PAYLOAD, dataset_id="nope"), 404, "dataset_not_found")
         self.fails(dict(PAYLOAD, dataset_id="gistemp"), 422, "dataset_not_ready")
         self.fails(dict(PAYLOAD, region_id="atlantida"), 404, "region_not_found")
-        self.fails(dict(PAYLOAD, region_id="Luanda, Angola"), 422, "region_needs_boundary")
+        self.assertEqual(self.svc.registry.resolve_region("Luanda, Angola")["boundary"], "polygon")
 
     def test_oversized_requests_are_refused_before_loading_anything(self):
         self.fails(dict(PAYLOAD, region_id="global"), 422, "request_too_large")

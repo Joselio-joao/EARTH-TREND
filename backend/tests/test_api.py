@@ -1,6 +1,7 @@
 """Testes HTTP com o TestClient do FastAPI. Só correm se o fastapi e o httpx estiverem instalados."""
 import tempfile
 import unittest
+import shutil
 from pathlib import Path
 
 try:
@@ -20,6 +21,7 @@ class Api(unittest.TestCase):
         self.create_app = create_app
         self.tmp = tempfile.TemporaryDirectory()
         self.settings = Settings(data_dir=Path(self.tmp.name))
+        shutil.copytree(Path(__file__).parents[1] / "data" / "regions", self.settings.regions_dir)
         self.client = TestClient(create_app(self.settings, loader=FakeLoader()))
 
     def tearDown(self):
