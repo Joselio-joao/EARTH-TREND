@@ -21,7 +21,7 @@ def _split(value, default):
 
 @dataclass
 class Settings:
-    data_dir: Path = REPO_ROOT / "data"
+    data_dir: Path = Path(__file__).resolve().parents[1] / "data"
     config_dir: Path = PACKAGE_DATA
     allowed_origins: list = field(default_factory=lambda: list(DEFAULT_ORIGINS))
     min_years: int = 10            # anos mínimos com dados para concluir uma tendência
