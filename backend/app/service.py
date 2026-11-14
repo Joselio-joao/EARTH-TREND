@@ -34,7 +34,8 @@ class Service:
             item = self.registry.public_dataset(d)
             if d.get("status") == "available":
                 files = self.loader.available(d)
-                item.update(files=files, ready=bool(files.get("earth_engine")) or\n                            files["grid_files"] + files["series_files"] > 0)
+                item.update(files=files, ready=bool(files.get("earth_engine")) or
+                            files["grid_files"] + files["series_files"] > 0)
             else:
                 item.update(files=None, ready=False)
             out.append(item)
