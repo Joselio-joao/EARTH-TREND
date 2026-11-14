@@ -22,7 +22,7 @@ export type ApiCatalog = {
   provinces: ProvinceRecord[];
 };
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://earthtrend-ai-api.onrender.com').replace(/\/$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -36,9 +36,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export async function loadApiCatalog(): Promise<ApiCatalog> {
   const [datasets, regions] = await Promise.all([
     request<{ datasets: DatasetRecord[] }>('/datasets'),
-    request<{ provinces: ProvinceRecord[] }>('/regions'),
+    request<{ regions: ProvinceRecord[] }>('/regions'),
   ]);
-  return { datasets: datasets.datasets, provinces: regions.provinces };
+  return { datasets: datasets.datasets, provinces: regions.regions };
 }
 
 export async function checkApi(): Promise<boolean> {
@@ -48,4 +48,12 @@ export async function checkApi(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+
+export async function runAnalysis(payload: {
+  dataset_id: string; region_id: string; start: string; end: string;
+  scale: string; question: string; include_trend_map?: boolean;
+}) {
+  return request<any>('/analyze', { method: 'POST', body: JSON.stringify(payload) });
 }
