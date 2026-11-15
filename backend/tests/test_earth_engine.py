@@ -6,11 +6,12 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from app.data.earth_engine import EarthEngineLoader
+from app.errors import ApiError
 
 
 class EarthEngineInitialization(unittest.TestCase):
     def test_map_permission_error_is_sanitized(self):
-        with self.assertRaises(Exception) as ctx:
+        with self.assertRaises(ApiError) as ctx:
             EarthEngineLoader._raise_map_error(
                 {"name": "NASA GPM"},
                 RuntimeError("Permission 'earthengine.thumbnails.create' denied on project"),
