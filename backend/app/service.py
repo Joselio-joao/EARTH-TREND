@@ -16,6 +16,7 @@ from .reports import report as reports
 DEFAULT_DATASET = "gpm_imerg_monthly"
 MAX_QUESTION = 300
 log = logging.getLogger("earthtrend.performance")
+log.setLevel(logging.INFO)
 PROFILE_ANALYSIS = os.getenv("EARTHTREND_PROFILE_ANALYSIS", "").strip().lower() in ("1", "true", "yes", "on")
 
 
@@ -175,11 +176,11 @@ class Service:
                     return "não recolhido"
                 stream = io.StringIO()
                 pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats("cumulative").print_stats(15)
-                return stream.getvalue().replace("\\n", " | ")
+                return stream.getvalue().replace("\n", " | ")
             log.info(
                 "ANALYSIS_PROFILE dataset=%s region=%s start=%s end=%s load_wall_s=%.3f "
-                "pipeline_wall_s=%.3f pre_store_total_s=%.3f cache=%s\\nLOAD_CPROFILE\\n%s"
-                "\\nPIPELINE_CPROFILE\\n%s",
+                "pipeline_wall_s=%.3f pre_store_total_s=%.3f cache=%s\nLOAD_CPROFILE\n%s"
+                "\nPIPELINE_CPROFILE\n%s",
                 dataset.get("id"), region.get("id"), req.get("start"), req.get("end"),
                 load_seconds, analysis_seconds, time.perf_counter() - request_started,
                 (source.meta or {}).get("cache", "sem indicação"),
