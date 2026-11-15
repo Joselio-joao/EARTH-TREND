@@ -41,7 +41,7 @@ class RegistryTests(unittest.TestCase):
             "gldas_soil_moisture": "available",
             "gldas_air_temperature": "available",
             "gistemp": "planned",
-            "swot_surface_water": "planned",
+            "swot": "planned",
         })
         self.assertIn("citation", self.reg.public_dataset(d))
         self.assertNotIn("file_patterns", self.reg.public_dataset(d))
