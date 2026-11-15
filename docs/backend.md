@@ -95,11 +95,10 @@ backend/app/
 | `GET /datasets` | todos | n/a | datasets e `ready` |
 | `GET /regions` | todos | n/a | regiões, `boundary`, `ready` |
 | `POST /analyze` | todos | `AnalysisRequest` | resultado completo com `id` |
-| `GET /results`, `/results/{id}`, `/results/{id}/map`, `/results/{id}/series.csv` | todos | id de 32 hex | resultado, mapa, CSV |
+| `GET /results/{id}`, `/results/{id}/map`, `/results/{id}/trend-map`, `/results/{id}/series.csv` | quem tem o link do resultado | id aleatório de 32 hex | resultado, mapa, CSV |
 | `GET /report/{id}` | todos | `format=html\|md` | relatório |
 
-Só fontes oficiais e públicas, com os ficheiros que a equipa descarregou com a sua conta. O backend nunca chama
-endpoints privados de outras aplicações.
+A listagem `GET /results` está desactivada: não é possível enumerar resultados. Os ids aleatórios de 128 bits funcionam como links-capacidade; qualquer pessoa que receba um link pode consultar esse resultado. Não partilhem links de resultados sensíveis. As respostas individuais usam `Cache-Control: private, no-store`. Resultados antigos são eliminados após 30 dias (na próxima gravação ou quando o próprio resultado é consultado).\n\n`POST /analyze` tem limite de 10 pedidos por endereço IP em 10 minutos; `/maps/preview` tem limite de 30 por minuto. O limitador actual é em memória e por processo: protege a instância única do MVP, mas numa implantação com várias instâncias deve ser substituído por armazenamento partilhado.\n\nSó fontes oficiais e públicas, com os ficheiros que a equipa descarregou com a sua conta. O backend nunca chama endpoints privados de outras aplicações.
 
 ### As partes que mordem
 
@@ -124,6 +123,6 @@ endpoints privados de outras aplicações.
 - [x] CORS só para os endereços listados (localhost e o GitHub Pages da equipa)
 - [x] limite de tamanho por pedido e limite de análises em paralelo
 - [x] erros inesperados não expõem detalhes internos
-- [ ] autenticação e limites por utilizador: fora do MVP (a API é pública e sem dados pessoais)
+- [x] listagem pública de resultados desactivada; acesso individual por id aleatório de 128 bits (link-capacidade, não autenticação de utilizador)\n- [x] limite básico por IP para análises e pré-visualizações de mapas (em memória, por processo)\n- [x] respostas individuais sem cache e retenção de resultados de 30 dias\n- [ ] autenticação por utilizador e quotas partilhadas entre instâncias: ainda não implementadas
 - [ ] `pip audit` das dependências: por correr na vossa máquina
 - [ ] política de privacidade: a pergunta de investigação fica guardada em `data/results`; digam-no se publicarem
