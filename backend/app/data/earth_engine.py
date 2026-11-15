@@ -3,8 +3,11 @@
 Usa uma conta de serviço no servidor. Nunca colocar a chave no frontend ou no Git.
 Quando não há credenciais, o backend continua a aceitar ficheiros locais como antes.
 """
+import hashlib
 import json
 import threading
+import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,6 +16,14 @@ import numpy as np
 from ..errors import ApiError
 from .containers import Series
 from .sources import FileLoader
+
+
+# Cache local por processo: análises repetidas deixam de voltar a consultar a NASA.
+# O TTL limita a idade dos dados e o tamanho evita crescimento ilimitado em memória.
+_CACHE_TTL_SECONDS = 6 * 60 * 60
+_CACHE_MAX_ENTRIES = 48
+_SERIES_CACHE = OrderedDict()
+_CACHE_LOCK = threading.Lock()
 
 
 class EarthEngineLoader:
@@ -107,6 +118,67 @@ class EarthEngineLoader:
                            "Não foi possível interpretar o GeoJSON de %s: %s" %
                            (path.name, str(exc)[:250])) from exc
 
+    def _cache_key(self, dataset, region, start, end):
+        boundary_version = None
+        region_id = region.get("id")
+        if region_id and region_id not in ("custom",):
+            path = self.regions_dir / (str(region_id) + ".geojson")
+            try:
+                stat = path.stat()
+                boundary_version = (stat.st_mtime_ns, stat.st_size)
+            except OSError:
+                boundary_version = None
+        payload = {
+            "dataset": dataset.get("id"),
+            "collection": self.COLLECTION,
+            "region": region_id,
+            "bbox": region.get("bbox"),
+            "boundary_version": boundary_version,
+            "start": start,
+            "end": end,
+        }
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def _cached_rows(self, key):
+        now = time.monotonic()
+        with _CACHE_LOCK:
+            entry = _SERIES_CACHE.get(key)
+            if entry is None:
+                return None
+            expires_at, rows = entry
+            if expires_at <= now:
+                del _SERIES_CACHE[key]
+                return None
+            _SERIES_CACHE.move_to_end(key)
+            return list(rows)
+
+    def _store_rows(self, key, rows):
+        with _CACHE_LOCK:
+            _SERIES_CACHE[key] = (time.monotonic() + _CACHE_TTL_SECONDS, tuple(rows))
+            _SERIES_CACHE.move_to_end(key)
+            while len(_SERIES_CACHE) > _CACHE_MAX_ENTRIES:
+                _SERIES_CACHE.popitem(last=False)
+
+    def _to_series(self, rows):
+        return Series(
+            ym=[row[0] for row in rows],
+            values=np.asarray([row[1] for row in rows], dtype=float),
+            unit="mm/hr",
+            files=[],
+            meta={
+                "source": "Google Earth Engine",
+                "collection": self.COLLECTION,
+                "band": self.BAND,
+                "cloud_project": self.project_id,
+                "aggregation": "Média espacial da banda precipitation sobre o polígono da região",
+                "scale_m": str(self.SCALE_METRES),
+                "cache": "memória local; validade máxima de 6 horas",
+                "note": "Série regional calculada no Earth Engine; este modo ainda não fornece raster para mapas.",
+            },
+            masked_invalid=0,
+        )
+
     def load(self, dataset, region, start, end):
         # Ficheiros locais mantêm prioridade e preservam mapas raster completos.
         local = self.files.available(dataset)
@@ -114,6 +186,11 @@ class EarthEngineLoader:
             return self.files.load(dataset, region, start, end)
         if dataset.get("id") != "gpm_imerg_monthly":
             return self.files.load(dataset, region, start, end)
+
+        cache_key = self._cache_key(dataset, region, start, end)
+        cached_rows = self._cached_rows(cache_key)
+        if cached_rows is not None:
+            return self._to_series(cached_rows)
 
         ee = self._client()
         geometry = self._geometry(ee, region)
@@ -140,8 +217,13 @@ class EarthEngineLoader:
                 return ee.Image(image).set("earthtrend_regional_mean", mean_value)
 
             reduced = collection.map(add_regional_mean).sort("system:time_start")
-            dates = reduced.aggregate_array("system:time_start").getInfo()
-            values = reduced.aggregate_array("earthtrend_regional_mean").getInfo()
+            # Uma única transferência para o servidor, em vez de duas chamadas getInfo().
+            result = ee.Dictionary({
+                "dates": reduced.aggregate_array("system:time_start"),
+                "values": reduced.aggregate_array("earthtrend_regional_mean"),
+            }).getInfo()
+            dates = result.get("dates") or []
+            values = result.get("values") or []
         except Exception as exc:
             raise ApiError(502, "earth_engine_query_failed",
                            "O Earth Engine não conseguiu calcular a série regional: %s" % str(exc)[:400]) from exc
@@ -160,19 +242,5 @@ class EarthEngineLoader:
             raise ApiError(422, "earth_engine_no_data",
                            "Não existem valores válidos de precipitação nesta região e período.")
 
-        return Series(
-            ym=[row[0] for row in rows],
-            values=np.asarray([row[1] for row in rows], dtype=float),
-            unit="mm/hr",
-            files=[],
-            meta={
-                "source": "Google Earth Engine",
-                "collection": self.COLLECTION,
-                "band": self.BAND,
-                "cloud_project": self.project_id,
-                "aggregation": "Média espacial da banda precipitation sobre o polígono da região",
-                "scale_m": str(self.SCALE_METRES),
-                "note": "Série regional calculada no Earth Engine; este modo ainda não fornece raster para mapas.",
-            },
-            masked_invalid=0,
-        )
+        self._store_rows(cache_key, rows)
+        return self._to_series(rows)
