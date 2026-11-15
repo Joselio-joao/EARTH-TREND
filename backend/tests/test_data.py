@@ -34,7 +34,15 @@ class RegistryTests(unittest.TestCase):
         d = self.reg.dataset("GPM_IMERG_monthly")
         self.assertEqual((d["id"], d["status"]), ("gpm_imerg_monthly", "available"))
         self.assertEqual(d["doi"], "10.5067/GPM/IMERG/3B-MONTH/07")
-        self.assertEqual(sorted(x["status"] for x in self.reg.datasets), ["available", "planned", "planned", "planned"])
+        self.assertEqual({x["id"]: x["status"] for x in self.reg.datasets}, {
+            "gpm_imerg_monthly": "available",
+            "modis_ndvi": "available",
+            "modis_evi": "available",
+            "gldas_soil_moisture": "available",
+            "gldas_air_temperature": "available",
+            "gistemp": "planned",
+            "swot_surface_water": "planned",
+        })
         self.assertIn("citation", self.reg.public_dataset(d))
         self.assertNotIn("file_patterns", self.reg.public_dataset(d))
         with self.assertRaises(ApiError) as ctx:
