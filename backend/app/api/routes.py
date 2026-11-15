@@ -2,6 +2,9 @@
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
 
+from ..security import enforce_rate_limit
+from ..errors import ApiError
+
 from .schemas import AnalysisRequest
 
 router = APIRouter()
@@ -37,6 +40,7 @@ def map_preview(request: Request,
                 region_id: str = Query(..., min_length=1, max_length=64),
                 start: str = Query(..., min_length=4, max_length=10),
                 end: str = Query(..., min_length=4, max_length=10)):
+    enforce_rate_limit(request, "map_preview", limit=30, window_seconds=60)
     image, dataset, region = _svc(request).map_preview({
         "dataset_id": dataset_id, "region_id": region_id, "start": start, "end": end,
     })
@@ -55,12 +59,14 @@ def map_preview(request: Request,
 
 @router.post("/analyze", tags=["análise"], summary="Executa uma análise de tendência e guarda o resultado")
 def analyze(body: AnalysisRequest, request: Request):
+    enforce_rate_limit(request, "analyze", limit=10, window_seconds=600)
     return _svc(request).analyze(body.model_dump())
 
 
-@router.get("/results", tags=["análise"], summary="Últimas análises guardadas")
-def results(request: Request, limit: int = Query(20, ge=1, le=100)):
-    return {"results": _svc(request).list_results(limit)}
+@router.get("/results", tags=["análise"], summary="Listagem desactivada por privacidade")
+def results():
+    raise ApiError(404, "results_listing_disabled",
+                   "A listagem pública de análises foi desactivada. Abra um resultado através do seu link privado.")
 
 
 @router.get("/results/{result_id}", tags=["análise"], summary="Resultado completo de uma análise")
