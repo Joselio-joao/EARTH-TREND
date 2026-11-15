@@ -51,6 +51,7 @@ class Registry:
                 "min": visualization.get("min"),
                 "max": visualization.get("max"),
                 "unit": d.get("display_unit") or d.get("native_unit"),
+                "palette": visualization.get("palette", []),
             }
         return out
 
