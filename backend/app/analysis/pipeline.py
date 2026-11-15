@@ -8,7 +8,7 @@ from ..data.containers import Cube
 from ..errors import ApiError
 from . import grid, timeops
 from .interpret import interpret
-from .trend import analyze_trend
+from .trend import analyze_trend, fdr_by
 
 SCALE_LABELS = {"monthly": "mensal", "seasonal": "sazonal", "annual": "anual"}
 
@@ -28,6 +28,7 @@ def _trend_map(data, lats, lons, mask, t, season, alpha, min_years, step, unit):
     directions = [[None for _ in range(shape[1])] for _ in range(shape[0])]
     slopes = np.full(shape, np.nan)
     p_values = np.full(shape, np.nan)
+    s_values = np.full(shape, np.nan)
     significant = np.full(shape, False, dtype=bool)
     observations = np.zeros(shape, dtype=int)
 
@@ -37,18 +38,31 @@ def _trend_map(data, lats, lons, mask, t, season, alpha, min_years, step, unit):
                                  min_years=min_years, step=step, expected_n=len(t))
             directions[iy][ix] = cell["direction"] if cell["n_observations"] else None
             observations[iy, ix] = cell["n_observations"]
-            significant[iy, ix] = bool(cell["significant"])
             if cell.get("mann_kendall"):
                 p_values[iy, ix] = cell["mann_kendall"]["p_value"]
+                s_values[iy, ix] = cell["mann_kendall"]["s"]
             if cell.get("sen"):
                 slopes[iy, ix] = cell["sen"]["slope_per_year"]
+
+    # BY controla FDR mesmo sob dependência espacial arbitrária entre células.
+    q_values, significant = fdr_by(p_values, alpha=alpha)
+    for iy in range(shape[0]):
+        for ix in range(shape[1]):
+            if np.isfinite(p_values[iy, ix]):
+                if significant[iy, ix]:
+                    directions[iy][ix] = "increasing" if s_values[iy, ix] > 0 else "decreasing"
+                else:
+                    directions[iy][ix] = "no_trend"
 
     return to_jsonable({
         "lats": out_lats.tolist(), "lons": out_lons.tolist(),
         "directions": directions, "slopes_per_year": slopes,
-        "p_values": p_values, "significant": significant,
+        "p_values": p_values, "q_values": q_values, "significant": significant,
+        "multiple_testing": {"method": "Benjamini-Yekutieli", "alpha": alpha,
+                             "valid_cells": int(np.isfinite(p_values).sum()),
+                             "note": "Significância ajustada para testes múltiplos com dependência espacial."},
         "observations": observations, "unit_per_year": "%s por ano" % unit,
-        "statistic": "Declive de Sen e Mann-Kendall por célula",
+        "statistic": "Declive de Sen; Mann-Kendall por célula com FDR Benjamini-Yekutieli",
         "cell_size_deg": [float(np.median(np.diff(out_lats))) if len(out_lats) > 1 else None,
                           float(np.median(np.diff(out_lons))) if len(out_lons) > 1 else None],
     })

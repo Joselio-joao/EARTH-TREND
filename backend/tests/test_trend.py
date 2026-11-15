@@ -57,6 +57,23 @@ class MannKendall(unittest.TestCase):
         self.assertGreater(hits / 300.0, 0.95)
 
 
+class MultipleTesting(unittest.TestCase):
+    def test_benjamini_yekutieli_adjusts_unsorted_values_and_ignores_nan(self):
+        p = np.array([0.02, 0.001, np.nan, 0.5, 0.01])
+        q, significant = trend.fdr_by(p, alpha=0.05)
+        self.assertAlmostEqual(q[0], 0.0555555556, places=8)
+        self.assertAlmostEqual(q[1], 0.0083333333, places=8)
+        self.assertTrue(math.isnan(q[2]))
+        self.assertEqual(q[3], 1.0)
+        self.assertAlmostEqual(q[4], 0.0416666667, places=8)
+        self.assertEqual(significant.tolist(), [False, True, False, False, True])
+
+    def test_empty_and_invalid_p_values_are_not_significant(self):
+        q, significant = trend.fdr_by(np.array([np.nan, np.inf, -0.1, 1.1]))
+        self.assertTrue(np.all(np.isnan(q)))
+        self.assertFalse(significant.any())
+
+
 class SenSlope(unittest.TestCase):
     def test_exact_line_gives_exact_slope(self):
         t = np.arange(2000.0, 2015.0)
