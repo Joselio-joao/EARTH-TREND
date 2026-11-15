@@ -17,7 +17,7 @@
       "variable": "precipitation",
       "group": null,
       "value_kind": "mean_rate",
-      "native_unit": "mm/day",
+      "native_unit": "mm/hr",
       "accepted_units": ["mm/day", "mm/hr"],
       "resolution": "monthly",
       "spatial_resolution_deg": 0.1,
@@ -31,7 +31,7 @@
         "A constelação de satélites muda ao longo do tempo (TRMM até maio de 2014, GPM Core depois) e isso pode introduzir artefactos em estudos de tendências de vários anos (documentação do IMERG)."
       ],
       "to_confirm": [
-        "Confirmar no atributo 'units' dos ficheiros descarregados que a variável 'precipitation' é a taxa média mensal em mm/dia (V07). O backend usa a unidade declarada no ficheiro e recusa unidades desconhecidas.",
+        "O catálogo oficial do Earth Engine declara a banda 'precipitation' do IMERG MONTHLY V07 em mm/hr. O backend usa a unidade declarada no ficheiro e converte a taxa média mensal em acumulação mensal; confirmar sempre os metadados de cada ficheiro local.",
         "Confirmar se a variável está na raiz do ficheiro ou no grupo 'Grid': python -m app.data.describe <ficheiro>."
       ]
     },
