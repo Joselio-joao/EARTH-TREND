@@ -299,6 +299,8 @@ class EarthEngineLoader:
                 max=float(visualization["max"]),
                 palette=list(visualization["palette"]),
             )
+            boundary = ee.Image().byte().paint(geometry, 1, 2).visualize(palette=["#172b24"])
+            rendered = rendered.blend(boundary)
             thumb_url = rendered.getThumbURL({
                 "region": geometry,
                 "dimensions": int(dimensions),
