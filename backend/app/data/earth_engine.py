@@ -230,12 +230,17 @@ class EarthEngineLoader:
             start_ee_date = ee.Date(start_date)
             offsets = ee.List.sequence(0, month_count - 1)
 
-            def monthly_record(offset):
-                month_start = start_ee_date.advance(offset, "month")
+            # Não usar List.map com um reduceRegion por mês: o Earth Engine
+            # pode executar essas agregações em paralelo e rejeitar a consulta
+            # com "Too many concurrent aggregations". List.iterate encadeia
+            # os meses numa única acumulação server-side.
+            def append_month(offset, accumulator):
+                month_start = start_ee_date.advance(ee.Number(offset), "month")
                 month_end = month_start.advance(1, "month")
                 monthly = collection.filterDate(month_start, month_end)
+                has_images = monthly.size().gt(0)
                 value = ee.Algorithms.If(
-                    monthly.size().gt(0),
+                    has_images,
                     monthly.mean().reduceRegion(
                         reducer=ee.Reducer.mean(),
                         geometry=geometry,
@@ -245,9 +250,10 @@ class EarthEngineLoader:
                     ).get(spec["band"]),
                     None,
                 )
-                return ee.Dictionary({"timestamp": month_start.millis(), "value": value})
+                record = ee.Dictionary({"timestamp": month_start.millis(), "value": value})
+                return ee.List(accumulator).add(record)
 
-            records = offsets.map(monthly_record).getInfo()
+            records = ee.List(offsets.iterate(append_month, ee.List([]))).getInfo()
         except Exception as exc:
             raise ApiError(502, "earth_engine_query_failed",
                            "O Earth Engine não conseguiu calcular a série mensal de %s: %s" %
