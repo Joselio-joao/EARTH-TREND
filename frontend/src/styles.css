@@ -58,3 +58,24 @@
 .pie-legend i{width:9px;height:9px;border-radius:2px;flex:none}
 .chart-explain{grid-column:1/-1;font-size:9px;line-height:1.55;color:#7c8982;margin:4px 0 8px}
 @media(max-width:600px){.chart-controls{gap:4px}.chart-controls button{width:30px;height:29px}.pie-layout{grid-template-columns:1fr;justify-items:center}.pie-legend{width:100%;max-height:130px;display:grid;grid-template-columns:1fr 1fr}.chart-shell.chart-expanded{inset:6px;padding:10px;border-radius:12px}.chart-shell.chart-expanded .chart-box{max-height:calc(100dvh - 132px)!important}}
+
+
+/* Real geospatial raster map panel */
+.raster-panel{margin-top:16px;position:relative}
+.raster-heading .panel-title{margin-bottom:5px}
+.raster-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:0 0 9px}
+.raster-controls button{width:32px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dce5e0;border-radius:7px;background:#fff;color:#315c49;cursor:pointer}
+.raster-controls button:disabled{opacity:.35;cursor:not-allowed}
+.raster-controls span{min-width:42px;text-align:center;font-size:10px;font-weight:700;color:#63756b;font-variant-numeric:tabular-nums}
+.raster-image-frame{height:410px;overflow:auto;display:flex;align-items:center;justify-content:center;background-color:#f2f5f2;background-image:linear-gradient(45deg,#e8eeea 25%,transparent 25%),linear-gradient(-45deg,#e8eeea 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e8eeea 75%),linear-gradient(-45deg,transparent 75%,#e8eeea 75%);background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0;border:1px solid #e0e8e2;border-radius:12px}
+.raster-image-frame img{height:auto;object-fit:contain;flex:none}
+.raster-state{padding:25px;max-width:420px;text-align:center;color:#65786d;font-size:11px;line-height:1.7}
+.raster-error{color:#a04f43}
+.raster-caption{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:11px;color:#6d7c75;font-size:9px}
+.raster-caption b{color:#394c41}
+.raster-legend{display:flex;align-items:center;gap:10px;margin-top:13px;font-size:9px;color:#66766e}
+.raster-legend i{height:9px;flex:1;max-width:360px;border-radius:20px;background:linear-gradient(90deg,#313695,#4575b4,#74add1,#abd9e9,#e0f3f8,#ffffbf,#fee090,#fdae61,#f46d43,#a50026)}
+.raster-panel .chart-explain{margin-top:10px}
+.raster-expanded{position:fixed;z-index:1100;inset:12px;margin:0!important;background:#fff;box-shadow:0 18px 70px #14251c55;border-radius:16px;padding:18px;overflow:auto;max-height:calc(100dvh - 24px)}
+.raster-expanded .raster-image-frame{height:calc(100dvh - 235px);min-height:250px}
+@media(max-width:760px){.raster-image-frame{height:300px}.raster-expanded{inset:5px;padding:10px;border-radius:12px}.raster-expanded .raster-image-frame{height:calc(100dvh - 210px)}.raster-caption{gap:7px 12px}}
