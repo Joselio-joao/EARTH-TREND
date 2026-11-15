@@ -20,3 +20,20 @@
 
 /* Modelos e cobertura temporal */
 .field-hint{display:block;color:#7b8b84;font-size:8px;line-height:1.6;margin-top:6px}.field select option:disabled{color:#a5aaa7}.form-panel{max-width:760px}.study-grid{grid-template-columns:minmax(0,1fr)}.visual-grid{grid-template-columns:minmax(0,1fr)}
+
+
+/* Scientific time-series chart */
+.chart-shell{margin-top:8px}
+.chart-meta{display:flex;justify-content:space-between;gap:12px;margin:8px 0 3px;color:#82938c;font-size:9px;font-weight:700;letter-spacing:.07em}
+.chart-box{height:auto;min-height:260px;background:#fff;border:1px solid #e4ece6;border-radius:12px;overflow:hidden;padding:8px 8px 0}
+.chart-box svg{display:block;width:100%;height:auto;min-height:220px;max-height:340px}
+.chart-tick{font-size:11px;fill:#788981;font-family:inherit}
+.chart-axis-title{font-size:11px;fill:#566a60;font-weight:700;font-family:inherit}
+.chart-legend{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-top:10px;color:#64776d;font-size:10px}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px}
+.chart-legend i{display:inline-block;width:17px;height:3px;border-radius:4px}
+.legend-observed{background:#31865b}
+.legend-trend{background:#8796c8;border-top:1px dashed #8796c8}
+.chart-legend small{margin-left:auto;color:#87958e;font-size:9px}
+.empty-chart{display:flex;align-items:center;justify-content:center;min-height:220px;padding:20px}
+@media(max-width:640px){.chart-box{padding:4px 2px 0;min-height:210px}.chart-box svg{min-height:205px}.chart-tick{font-size:10px}.chart-axis-title{font-size:10px}.chart-legend small{width:100%;margin-left:0}}
