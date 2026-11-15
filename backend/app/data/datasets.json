@@ -23,7 +23,9 @@
       "spatial_resolution_deg": 0.1,
       "valid_min": 0,
       "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
-      "coverage_note": "Junho de 2000 até ao presente, com cerca de 4 meses de atraso (Final Run).",
+      "coverage_note": "Junho de 2000 até setembro de 2025 na cobertura atualmente confirmada; o Final Run tem atraso de publicação.",
+      "coverage_start": "2000-06",
+      "coverage_end": "2025-09",
       "limitations": [
         "As estimativas de precipitação por satélite têm menor desempenho em zonas costeiras e em terreno complexo (documentação do IMERG).",
         "A constelação de satélites muda ao longo do tempo (TRMM até maio de 2014, GPM Core depois) e isso pode introduzir artefactos em estudos de tendências de vários anos (documentação do IMERG)."
