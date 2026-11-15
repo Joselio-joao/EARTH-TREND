@@ -205,6 +205,31 @@ class Service:
             raise ApiError(404, "result_not_found", "Resultado %r não encontrado." % (rid,))
         return result
 
+    def map_preview(self, payload):
+        """Cria uma pré-visualização raster real para dataset, região e período."""
+        req, dataset, region = self._normalize({
+            "dataset_id": payload.get("dataset_id"),
+            "region_id": payload.get("region_id"),
+            "bbox": payload.get("bbox"),
+            "start": payload.get("start"),
+            "end": payload.get("end"),
+            "scale": "annual",
+        })
+        month_count = timeops.months_between(req["load_start"], req["end"])
+        if month_count > 420:
+            raise ApiError(422, "map_period_too_large",
+                           "O mapa aceita no máximo 35 anos por pedido. Reduza o período.")
+        renderer = getattr(self.loader, "render_map_png", None)
+        if not callable(renderer):
+            raise ApiError(409, "map_renderer_unavailable",
+                           "O carregador atual não disponibiliza renderização raster.")
+        if not self.slots.acquire(blocking=False):
+            raise ApiError(429, "busy", "O servidor está a processar outros pedidos. Tente novamente.")
+        try:
+            return renderer(dataset, region, req["load_start"], req["end"], dimensions=1000), dataset, region
+        finally:
+            self.slots.release()
+
     def get_map(self, rid):
         m = self.get_result(rid).get("map")
         if not m:
