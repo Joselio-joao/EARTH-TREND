@@ -17,7 +17,7 @@ export type DatasetRecord = {
   display_unit?: string;
   note?: string;
   provider?: string;
-  map_range?: { min: number; max: number; unit?: string };
+  map_range?: { min: number; max: number; unit?: string; palette?: string[] };
 };
 
 export type ProvinceRecord = {
