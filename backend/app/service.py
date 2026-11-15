@@ -1,6 +1,12 @@
 """Casos de uso da API, sem depender do FastAPI: validação, carregamento, análise e armazenamento."""
+import cProfile
 import datetime
+import io
+import logging
+import os
+import pstats
 import threading
+import time
 
 from . import __version__
 from .analysis import pipeline, timeops
@@ -9,6 +15,8 @@ from .reports import report as reports
 
 DEFAULT_DATASET = "gpm_imerg_monthly"
 MAX_QUESTION = 300
+log = logging.getLogger("earthtrend.performance")
+PROFILE_ANALYSIS = os.getenv("EARTHTREND_PROFILE_ANALYSIS", "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _now():
@@ -136,10 +144,47 @@ class Service:
             raise ApiError(429, "busy", "O servidor está a processar outras análises. Tente novamente dentro de "
                            "instantes.")
         try:
-            source = self.loader.load(dataset, region, req["load_start"], req["end"])
-            result = pipeline.run_analysis(dataset, region, req, source, self.settings.min_years)
+            request_started = time.perf_counter()
+            load_started = time.perf_counter()
+            load_profiler = cProfile.Profile() if PROFILE_ANALYSIS else None
+            if load_profiler:
+                load_profiler.enable()
+            try:
+                source = self.loader.load(dataset, region, req["load_start"], req["end"])
+            finally:
+                if load_profiler:
+                    load_profiler.disable()
+            load_seconds = time.perf_counter() - load_started
+
+            analysis_started = time.perf_counter()
+            analysis_profiler = cProfile.Profile() if PROFILE_ANALYSIS else None
+            if analysis_profiler:
+                analysis_profiler.enable()
+            try:
+                result = pipeline.run_analysis(dataset, region, req, source, self.settings.min_years)
+            finally:
+                if analysis_profiler:
+                    analysis_profiler.disable()
+            analysis_seconds = time.perf_counter() - analysis_started
         finally:
             self.slots.release()
+
+        if PROFILE_ANALYSIS:
+            def profile_summary(profiler):
+                if profiler is None:
+                    return "não recolhido"
+                stream = io.StringIO()
+                pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats("cumulative").print_stats(15)
+                return stream.getvalue().replace("\\n", " | ")
+            log.info(
+                "ANALYSIS_PROFILE dataset=%s region=%s start=%s end=%s load_wall_s=%.3f "
+                "pipeline_wall_s=%.3f pre_store_total_s=%.3f cache=%s\\nLOAD_CPROFILE\\n%s"
+                "\\nPIPELINE_CPROFILE\\n%s",
+                dataset.get("id"), region.get("id"), req.get("start"), req.get("end"),
+                load_seconds, analysis_seconds, time.perf_counter() - request_started,
+                (source.meta or {}).get("cache", "sem indicação"),
+                profile_summary(load_profiler), profile_summary(analysis_profiler),
+            )
         rid = self.store.new_id()
         result.update(id=rid, created_at=_now(), backend_version=__version__)
         result["links"] = {
