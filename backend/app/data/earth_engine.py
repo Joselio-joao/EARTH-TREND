@@ -1,7 +1,8 @@
-"""Carregador opcional GPM IMERG através do Google Earth Engine.
+"""Carregador NASA Earth Engine para séries regionais mensais.
 
-Usa uma conta de serviço no servidor. Nunca colocar a chave no frontend ou no Git.
-Quando não há credenciais, o backend continua a aceitar ficheiros locais como antes.
+A configuração de cada produto fica em datasets.json. O serviço devolve séries
+regionais; não afirma produzir raster nem mapas quando a fonte é Series.
+As credenciais Earth Engine permanecem exclusivamente no backend.
 """
 import hashlib
 import json
@@ -18,8 +19,6 @@ from .containers import Series
 from .sources import FileLoader
 
 
-# Cache local por processo: análises repetidas deixam de voltar a consultar a NASA.
-# O TTL limita a idade dos dados e o tamanho evita crescimento ilimitado em memória.
 _CACHE_TTL_SECONDS = 6 * 60 * 60
 _CACHE_MAX_ENTRIES = 48
 _SERIES_CACHE = OrderedDict()
@@ -27,10 +26,6 @@ _CACHE_LOCK = threading.Lock()
 
 
 class EarthEngineLoader:
-    COLLECTION = "NASA/GPM_L3/IMERG_MONTHLY_V07"
-    BAND = "precipitation"
-    SCALE_METRES = 11132
-
     def __init__(self, raw_dir, regions_dir, project_id=None, service_account_json=None):
         self.files = FileLoader(raw_dir)
         self.regions_dir = Path(regions_dir)
@@ -46,7 +41,7 @@ class EarthEngineLoader:
 
     def available(self, dataset):
         result = self.files.available(dataset)
-        result["earth_engine"] = bool(self.configured and dataset.get("id") == "gpm_imerg_monthly")
+        result["earth_engine"] = bool(self.configured and dataset.get("earth_engine"))
         return result
 
     def _client(self):
@@ -111,14 +106,19 @@ class EarthEngineLoader:
             features = [ee.Feature(ee.Geometry(g, proj="EPSG:4326", geodesic=False))
                         for g in geometries]
             return ee.FeatureCollection(features).geometry()
-        except ApiError:
-            raise
         except Exception as exc:
             raise ApiError(422, "earth_engine_boundary_invalid",
                            "Não foi possível interpretar o GeoJSON de %s: %s" %
                            (path.name, str(exc)[:250])) from exc
 
-    def _cache_key(self, dataset, region, start, end):
+    @staticmethod
+    def _spec(dataset):
+        spec = dataset.get("earth_engine")
+        if not isinstance(spec, dict) or not spec.get("collection") or not spec.get("band"):
+            return None
+        return spec
+
+    def _cache_key(self, dataset, region, start, end, spec):
         boundary_version = None
         region_id = region.get("id")
         if region_id and region_id not in ("custom",):
@@ -130,7 +130,7 @@ class EarthEngineLoader:
                 boundary_version = None
         payload = {
             "dataset": dataset.get("id"),
-            "collection": self.COLLECTION,
+            "spec": spec,
             "region": region_id,
             "bbox": region.get("bbox"),
             "boundary_version": boundary_version,
@@ -160,87 +160,110 @@ class EarthEngineLoader:
             while len(_SERIES_CACHE) > _CACHE_MAX_ENTRIES:
                 _SERIES_CACHE.popitem(last=False)
 
-    def _to_series(self, rows):
+    def _to_series(self, rows, dataset, spec, cache_hit=False):
         return Series(
             ym=[row[0] for row in rows],
             values=np.asarray([row[1] for row in rows], dtype=float),
-            unit="mm/hr",
+            unit=dataset.get("native_unit"),
             files=[],
             meta={
                 "source": "Google Earth Engine",
-                "collection": self.COLLECTION,
-                "band": self.BAND,
+                "collection": spec["collection"],
+                "band": spec["band"],
                 "cloud_project": self.project_id,
-                "aggregation": "Média espacial da banda precipitation sobre o polígono da região",
-                "scale_m": str(self.SCALE_METRES),
-                "cache": "memória local; validade máxima de 6 horas",
-                "note": "Série regional calculada no Earth Engine; este modo ainda não fornece raster para mapas.",
+                "aggregation": spec.get("aggregation", "Média espacial mensal sobre o polígono da região"),
+                "temporal_aggregation": spec.get("temporal_aggregation", "média mensal das imagens disponíveis"),
+                "scale_m": str(spec.get("scale_m")),
+                "quality_filter": spec.get("quality_filter", "não configurado"),
+                "cache": "memória local; validade máxima de 6 horas" if cache_hit else "miss",
+                "note": "Série regional; este carregador ainda não devolve um raster para mapas.",
             },
             masked_invalid=0,
         )
 
+    def _prepared_collection(self, ee, spec, start_date, end_date):
+        collection = (ee.ImageCollection(spec["collection"])
+                      .filterDate(start_date, end_date)
+                      .select([spec["band"]] + ([spec["qa_band"]] if spec.get("qa_band") else [])))
+
+        def prepare(image):
+            image = ee.Image(image)
+            band = image.select(spec["band"])
+            if spec.get("qa_band"):
+                qa = image.select(spec["qa_band"])
+                band = band.updateMask(qa.eq(int(spec.get("qa_value", 0))))
+            scale = float(spec.get("value_scale", 1.0))
+            if scale != 1.0:
+                band = band.multiply(scale)
+            offset = float(spec.get("value_offset", 0.0))
+            if offset != 0.0:
+                band = band.add(offset)
+            return band.copyProperties(image, ["system:time_start"])
+
+        return collection.map(prepare).select(spec["band"])
+
     def load(self, dataset, region, start, end):
-        # Ficheiros locais mantêm prioridade e preservam mapas raster completos.
+        # Ficheiros locais mantêm prioridade e podem fornecer cubos raster completos.
         local = self.files.available(dataset)
         if local["grid_files"] or local["series_files"]:
             return self.files.load(dataset, region, start, end)
-        if dataset.get("id") != "gpm_imerg_monthly":
+
+        spec = self._spec(dataset)
+        if not spec:
             return self.files.load(dataset, region, start, end)
 
-        cache_key = self._cache_key(dataset, region, start, end)
+        cache_key = self._cache_key(dataset, region, start, end, spec)
         cached_rows = self._cached_rows(cache_key)
         if cached_rows is not None:
-            return self._to_series(cached_rows)
+            return self._to_series(cached_rows, dataset, spec, cache_hit=True)
 
         ee = self._client()
         geometry = self._geometry(ee, region)
         start_date = "%04d-%02d-01" % (start[0], start[1])
-        end_year, end_month = end
-        if end_month == 12:
-            end_date = "%04d-01-01" % (end_year + 1)
-        else:
-            end_date = "%04d-%02d-01" % (end_year, end_month + 1)
+        month_count = (end[0] - start[0]) * 12 + end[1] - start[1] + 1
 
         try:
-            collection = (ee.ImageCollection(self.COLLECTION)
-                          .filterDate(start_date, end_date)
-                          .select(self.BAND))
+            collection = self._prepared_collection(
+                ee, spec, start_date,
+                "%04d-%02d-01" % ((end[0] + 1, 1) if end[1] == 12 else (end[0], end[1] + 1))
+            )
+            start_ee_date = ee.Date(start_date)
+            offsets = ee.List.sequence(0, month_count - 1)
 
-            def add_regional_mean(image):
-                mean_value = ee.Image(image).reduceRegion(
-                    reducer=ee.Reducer.mean(),
-                    geometry=geometry,
-                    scale=self.SCALE_METRES,
-                    maxPixels=1e13,
-                    bestEffort=True,
-                ).get(self.BAND)
-                return ee.Image(image).set("earthtrend_regional_mean", mean_value)
+            def monthly_record(offset):
+                month_start = start_ee_date.advance(offset, "month")
+                month_end = month_start.advance(1, "month")
+                monthly = collection.filterDate(month_start, month_end)
+                value = ee.Algorithms.If(
+                    monthly.size().gt(0),
+                    monthly.mean().reduceRegion(
+                        reducer=ee.Reducer.mean(),
+                        geometry=geometry,
+                        scale=int(spec["scale_m"]),
+                        maxPixels=1e13,
+                        bestEffort=bool(spec.get("best_effort", False)),
+                    ).get(spec["band"]),
+                    None,
+                )
+                return ee.Dictionary({"timestamp": month_start.millis(), "value": value})
 
-            reduced = collection.map(add_regional_mean).sort("system:time_start")
-            # Uma única transferência para o servidor, em vez de duas chamadas getInfo().
-            result = ee.Dictionary({
-                "dates": reduced.aggregate_array("system:time_start"),
-                "values": reduced.aggregate_array("earthtrend_regional_mean"),
-            }).getInfo()
-            dates = result.get("dates") or []
-            values = result.get("values") or []
+            records = offsets.map(monthly_record).getInfo()
         except Exception as exc:
             raise ApiError(502, "earth_engine_query_failed",
-                           "O Earth Engine não conseguiu calcular a série regional: %s" % str(exc)[:400]) from exc
+                           "O Earth Engine não conseguiu calcular a série mensal de %s: %s" %
+                           (dataset.get("name", dataset.get("id")), str(exc)[:400])) from exc
 
-        if not dates or not values or len(dates) != len(values):
-            raise ApiError(422, "earth_engine_no_data",
-                           "O Earth Engine não devolveu observações para esta região e período.")
         rows = []
-        for timestamp, value in zip(dates, values):
-            if value is None:
+        for record in records or []:
+            timestamp, value = record.get("timestamp"), record.get("value")
+            if timestamp is None or value is None:
                 continue
             dt = datetime.fromtimestamp(float(timestamp) / 1000.0, tz=timezone.utc)
             rows.append(((dt.year, dt.month), float(value)))
         rows.sort(key=lambda item: item[0])
         if not rows:
             raise ApiError(422, "earth_engine_no_data",
-                           "Não existem valores válidos de precipitação nesta região e período.")
+                           "O Earth Engine não devolveu observações para esta região e período.")
 
         self._store_rows(cache_key, rows)
-        return self._to_series(rows)
+        return self._to_series(rows, dataset, spec)
