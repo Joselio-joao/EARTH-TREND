@@ -12,11 +12,13 @@ except Exception:          # fastapi ou httpx em falta
 
 from app.config import Settings
 from tests.test_service import PAYLOAD, FakeLoader
+from app.security import rate_limiter
 
 
 @unittest.skipUnless(HAVE_API, "fastapi e httpx não estão instalados (pip install -r requirements-dev.txt)")
 class Api(unittest.TestCase):
     def setUp(self):
+        rate_limiter.clear()
         from app.main import create_app
         self.create_app = create_app
         self.tmp = tempfile.TemporaryDirectory()
@@ -43,7 +45,10 @@ class Api(unittest.TestCase):
         self.assertEqual(body["trend"]["direction"], "increasing")
         self.assertEqual(self.client.get("/results/" + rid).json()["id"], rid)
         self.assertEqual(self.client.get("/results/%s/map" % rid).json()["unit"], "mm/ano")
-        self.assertEqual(self.client.get("/results").json()["results"][0]["id"], rid)
+        self.assertEqual(self.client.get("/results").status_code, 404)
+        private_result = self.client.get("/results/" + rid)
+        self.assertEqual(private_result.json()["id"], rid)
+        self.assertIn("no-store", private_result.headers.get("cache-control", ""))
         csv = self.client.get("/results/%s/series.csv" % rid)
         self.assertTrue(csv.headers["content-type"].startswith("text/csv"))
         self.assertIn("attachment", csv.headers["content-disposition"])
@@ -52,6 +57,15 @@ class Api(unittest.TestCase):
         self.assertIn("<svg", html.text)
         self.assertIn("## Limitações", self.client.get("/report/%s?format=md" % rid).text)
         self.assertEqual(self.client.get("/report/%s?format=pdf" % rid).status_code, 422)
+
+    def test_analysis_rate_limit_returns_retry_after(self):
+        self.client.app.state.service.analyze = lambda payload: {"status": "ok"}
+        for _ in range(10):
+            self.assertEqual(self.client.post("/analyze", json=PAYLOAD).status_code, 200)
+        limited = self.client.post("/analyze", json=PAYLOAD)
+        self.assertEqual(limited.status_code, 429)
+        self.assertEqual(limited.json()["detail"]["code"], "rate_limit_exceeded")
+        self.assertTrue(limited.headers.get("retry-after"))
 
     def test_trend_map_flow(self):
         r = self.client.post("/analyze", json=dict(PAYLOAD, include_trend_map=True))
