@@ -28,6 +28,16 @@ def create_app(settings=None, loader=None):
     app = FastAPI(title="EarthTrend AI API", version=__version__, description=DESCRIPTION)
     app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins,
                        allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+
+    @app.middleware("http")
+    async def protect_private_responses(request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/results/") or path.startswith("/report/"):
+            response.headers["Cache-Control"] = "private, no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Vary"] = "Authorization, Cookie"
+        return response
     registry = Registry.load(settings.config_dir, settings.regions_dir)
     data_loader = loader or EarthEngineLoader(
         settings.raw_dir, settings.regions_dir,
