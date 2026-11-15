@@ -3,10 +3,17 @@ export type ApiStatus = 'connected' | 'offline' | 'loading';
 export type DatasetRecord = {
   id: string;
   name: string;
-  variable: string;
-  purpose: string;
-  source: string;
+  variable?: string;
+  purpose?: string;
+  source?: string;
+  variable_label?: string;
   status: string;
+  ready?: boolean;
+  coverage_start?: string;
+  coverage_end?: string;
+  coverage_note?: string;
+  note?: string;
+  provider?: string;
 };
 
 export type ProvinceRecord = {
