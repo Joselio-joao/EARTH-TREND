@@ -195,6 +195,9 @@ class EarthEngineLoader:
             scale = float(spec.get("value_scale", 1.0))
             if scale != 1.0:
                 band = band.multiply(scale)
+            offset = float(spec.get("value_offset", 0.0))
+            if offset != 0.0:
+                band = band.add(offset)
             return band.copyProperties(image, ["system:time_start"])
 
         return collection.map(prepare).select(spec["band"])
