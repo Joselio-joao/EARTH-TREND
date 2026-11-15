@@ -299,6 +299,23 @@ class EarthEngineLoader:
         return self._to_series(rows, dataset, spec)
 
 
+    @staticmethod
+    def _raise_map_error(dataset, exc):
+        """Regista o detalhe técnico no servidor e devolve uma mensagem segura à API."""
+        dataset_name = dataset.get("name", dataset.get("id"))
+        _LOG.exception("Falha ao gerar raster Earth Engine: dataset=%s", dataset_name)
+        detail = str(exc).lower()
+        if "permission" in detail or "permission_denied" in detail:
+            raise ApiError(
+                503, "earth_engine_permission_denied",
+                "A conta de serviço não tem a permissão necessária para criar pré-visualizações no Earth Engine. "
+                "Verifique as permissões IAM do projecto."
+            ) from exc
+        raise ApiError(
+            502, "earth_engine_map_failed",
+            "Não foi possível gerar o mapa de %s. Os detalhes técnicos foram registados no servidor." % dataset_name
+        ) from exc
+
     def render_map_png(self, dataset, region, start, end, dimensions=1000):
         """Renderiza um raster temporal real do Earth Engine como PNG para pré-visualização."""
         spec = self._spec(dataset)
@@ -341,6 +358,4 @@ class EarthEngineLoader:
         except ApiError:
             raise
         except Exception as exc:
-            raise ApiError(502, "earth_engine_map_failed",
-                           "Não foi possível gerar o raster de %s: %s" %
-                           (dataset.get("name", dataset.get("id")), str(exc)[:300])) from exc
+            self._raise_map_error(dataset, exc)
