@@ -276,10 +276,11 @@ class EarthEngineLoader:
                 raise ApiError(504, "earth_engine_timeout",
                                "A consulta de %s demorou mais do que o limite do serviço. "
                                "Reduza o período ou a região e tente novamente." % dataset_name) from exc
+            _LOG.exception("Falha na consulta Earth Engine: dataset=%s", dataset_name)
             raise ApiError(502, "earth_engine_query_failed",
                            "O Earth Engine não conseguiu calcular a série mensal de %s. "
-                           "Verifique a disponibilidade do produto e tente novamente. Detalhe: %s" %
-                           (dataset_name, detail[:250])) from exc
+                           "Verifique a disponibilidade do produto e tente novamente. "
+                           "Os detalhes técnicos foram registados no servidor." % dataset_name) from exc
 
         rows = []
         for record in records or []:
