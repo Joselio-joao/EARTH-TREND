@@ -1,6 +1,8 @@
 import json
 import shutil
 import tempfile
+import os
+import time
 import unittest
 from pathlib import Path
 
@@ -186,6 +188,14 @@ class Storage(unittest.TestCase):
         for bad in ("../x", "abc", "G" * 32, "a" * 31, ""):
             self.assertFalse(ResultStore.valid_id(bad))
             self.assertIsNone(self.store.load(bad))
+
+    def test_expired_results_are_not_returned_and_are_pruned(self):
+        rid = ResultStore.new_id()
+        self.store.save({"id": rid, "created_at": "old"})
+        old = time.time() - 31 * 86400
+        os.utime(self.store.dir / (rid + ".json"), (old, old))
+        self.assertIsNone(self.store.load(rid))
+        self.assertFalse((self.store.dir / (rid + ".json")).exists())
 
     def test_roundtrip_listing_order_and_nan_refusal(self):
         a, b = ResultStore.new_id(), ResultStore.new_id()
