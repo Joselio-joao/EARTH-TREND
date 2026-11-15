@@ -26,7 +26,8 @@ class Settings:
     allowed_origins: list = field(default_factory=lambda: list(DEFAULT_ORIGINS))
     min_years: int = 10            # anos mínimos com dados para concluir uma tendência
     max_values: int = 20_000_000   # células x passos de tempo que um pedido pode carregar
-    max_concurrent: int = 2        # análises em paralelo (protege a memória do servidor)
+    max_concurrent: int = 1        # uma análise de cada vez no plano gratuito
+    max_months: int = 420          # limite preventivo: 35 anos de observações mensais
     ee_project_id: str = ""
     ee_service_account_json: str = ""
 
@@ -51,7 +52,14 @@ class Settings:
         s.allowed_origins = _split(env.get("EARTHTREND_ALLOWED_ORIGINS"), DEFAULT_ORIGINS)
         s.min_years = int(env.get("EARTHTREND_MIN_YEARS", s.min_years))
         s.max_values = int(env.get("EARTHTREND_MAX_VALUES", s.max_values))
-        s.max_concurrent = int(env.get("EARTHTREND_MAX_CONCURRENT", s.max_concurrent))
+        try:
+            s.max_concurrent = max(1, min(2, int(env.get("EARTHTREND_MAX_CONCURRENT", s.max_concurrent))))
+        except (TypeError, ValueError):
+            s.max_concurrent = 1
+        try:
+            s.max_months = max(12, min(600, int(env.get("EARTHTREND_MAX_MONTHS", s.max_months))))
+        except (TypeError, ValueError):
+            s.max_months = 420
         s.ee_project_id = env.get("EARTHTREND_EE_PROJECT_ID", "").strip()
         s.ee_service_account_json = env.get("EARTHTREND_EE_SERVICE_ACCOUNT_JSON", "")
         return s
