@@ -41,7 +41,7 @@ function MapPanel({src,dataset,region,period}:{src:string;dataset?:DatasetRecord
    <img src={src} alt={`Raster ambiental de ${dataset?.name||'variável NASA'} em ${region}, período ${period}. A imagem representa a média temporal das imagens disponíveis.`} onLoad={()=>setLoaded(true)} onError={()=>setFailed(true)} style={{width:(zoom*100)+'%',maxWidth:'none',display:loaded?'block':'none'}}/>
   </div>
   <div className="raster-caption"><span><b>Variável:</b> {dataset?.variable_label||dataset?.name||'NASA'}</span><span><b>Região:</b> {region}</span><span><b>Período:</b> {period}</span></div>
-  {range&&<div className="raster-legend"><span>{range.min} {range.unit||''}</span><i/><span>{range.max} {range.unit||''}</span></div>}
+  {range&&<div className="raster-legend"><span>{range.min} {range.unit||''}</span><i style={{background:range.palette?.length?`linear-gradient(90deg, ${range.palette.join(',')})`:undefined}}/><span>{range.max} {range.unit||''}</span></div>}
   <p className="chart-explain">Estatística: média temporal das imagens disponíveis no período. A paleta indica a magnitude do valor, não a significância estatística nem a tendência. A resolução espacial depende do produto NASA seleccionado.</p>
  </section>
 }
