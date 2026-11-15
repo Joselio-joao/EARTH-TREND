@@ -12,6 +12,9 @@ export type DatasetRecord = {
   coverage_start?: string;
   coverage_end?: string;
   coverage_note?: string;
+  source_cadence?: string;
+  spatial_resolution_m?: number;
+  display_unit?: string;
   note?: string;
   provider?: string;
 };
