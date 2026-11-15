@@ -13,6 +13,7 @@ export type DatasetRecord = {
   coverage_end?: string;
   coverage_note?: string;
   note?: string;
+  provider?: string;
 };
 
 export type ProvinceRecord = {
