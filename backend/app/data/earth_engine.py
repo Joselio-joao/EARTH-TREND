@@ -6,6 +6,7 @@ As credenciais Earth Engine permanecem exclusivamente no backend.
 """
 import hashlib
 import json
+import logging
 import threading
 import time
 from collections import OrderedDict
@@ -23,6 +24,8 @@ _CACHE_TTL_SECONDS = 6 * 60 * 60
 _CACHE_MAX_ENTRIES = 48
 _SERIES_CACHE = OrderedDict()
 _CACHE_LOCK = threading.Lock()
+_LOG = logging.getLogger("earthtrend.earth_engine")
+_AUTH_RETRY_SECONDS = 60
 
 
 class EarthEngineLoader:
@@ -32,7 +35,7 @@ class EarthEngineLoader:
         self.project_id = (project_id or "").strip()
         self.service_account_json = service_account_json
         self._ee = None
-        self._init_error = None
+        self._init_error_at = 0.0
         self._lock = threading.Lock()
 
     @property
@@ -47,16 +50,18 @@ class EarthEngineLoader:
     def _client(self):
         if self._ee is not None:
             return self._ee
-        if self._init_error:
-            raise ApiError(503, "earth_engine_auth_failed", self._init_error)
+        if self._init_error_at and time.monotonic() - self._init_error_at < _AUTH_RETRY_SECONDS:
+            raise ApiError(503, "earth_engine_auth_failed",
+                           "A autenticação do Earth Engine falhou recentemente. O servidor tentará novamente em breve.")
         if not self.configured:
             raise ApiError(409, "earth_engine_not_configured",
                            "O Google Earth Engine ainda não está autenticado no servidor.")
         with self._lock:
             if self._ee is not None:
                 return self._ee
-            if self._init_error:
-                raise ApiError(503, "earth_engine_auth_failed", self._init_error)
+            if self._init_error_at and time.monotonic() - self._init_error_at < _AUTH_RETRY_SECONDS:
+                raise ApiError(503, "earth_engine_auth_failed",
+                               "A autenticação do Earth Engine falhou recentemente. O servidor tentará novamente em breve.")
             try:
                 import ee
                 from google.oauth2 import service_account
@@ -71,11 +76,12 @@ class EarthEngineLoader:
                 self._ee = ee
                 return ee
             except Exception as exc:
-                self._init_error = (
-                    "Não foi possível autenticar no Earth Engine. Confirme o registo do projecto, "
-                    "a API activada e as permissões da conta de serviço. Detalhe técnico: %s" % str(exc)[:400]
-                )
-                raise ApiError(503, "earth_engine_auth_failed", self._init_error) from exc
+                self._init_error_at = time.monotonic()
+                _LOG.exception("Falha ao autenticar no Earth Engine")
+                raise ApiError(
+                    503, "earth_engine_auth_failed",
+                    "Não foi possível autenticar no Earth Engine. Confirme o projecto, a API e as permissões da conta de serviço."
+                ) from exc
 
     def _geometry(self, ee, region):
         bbox = region["bbox"]
