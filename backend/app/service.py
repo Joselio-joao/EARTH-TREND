@@ -141,6 +141,11 @@ class Service:
     def analyze(self, payload):
         req, dataset, region = self._normalize(payload)
         self._check_size(dataset, region, req)
+        requested_months = timeops.months_between(req["load_start"], req["end"])
+        if requested_months > self.settings.max_months:
+            raise ApiError(422, "period_too_large",
+                           "O período excede o limite preventivo de %d meses. Divida a análise em períodos menores."
+                           % self.settings.max_months)
         if not self.slots.acquire(blocking=False):
             raise ApiError(429, "busy", "O servidor está a processar outras análises. Tente novamente dentro de "
                            "instantes.")
