@@ -58,6 +58,33 @@ def mk_z_p(s, var):
     return z, math.erfc(abs(z) / math.sqrt(2.0))
 
 
+
+def fdr_by(p_values, alpha=0.05):
+    """Benjamini-Yekutieli: q-values and significance under arbitrary dependence.
+
+    NaN/inf are ignored and remain NaN/False. BY is more conservative than BH,
+    but is appropriate when neighbouring map cells may be spatially dependent.
+    """
+    p = np.asarray(p_values, dtype=float)
+    q = np.full(p.shape, np.nan, dtype=float)
+    valid = np.isfinite(p) & (p >= 0.0) & (p <= 1.0)
+    indices = np.flatnonzero(valid.ravel())
+    if indices.size == 0:
+        return q, np.zeros(p.shape, dtype=bool)
+    flat = p.ravel()
+    order = np.argsort(flat[indices], kind="stable")
+    sorted_indices = indices[order]
+    sorted_p = flat[sorted_indices]
+    m = int(sorted_p.size)
+    harmonic = float(np.sum(1.0 / np.arange(1, m + 1, dtype=float)))
+    ranks = np.arange(1, m + 1, dtype=float)
+    adjusted = sorted_p * m * harmonic / ranks
+    adjusted = np.minimum.accumulate(adjusted[::-1])[::-1]
+    q.ravel()[sorted_indices] = np.minimum(adjusted, 1.0)
+    significant = np.isfinite(q) & (q <= alpha)
+    return q, significant
+
+
 # --------------------------------------------------------------- Sen's slope
 
 def pairwise_slopes(t, x):
