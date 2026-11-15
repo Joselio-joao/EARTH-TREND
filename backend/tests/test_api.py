@@ -82,7 +82,7 @@ class Api(unittest.TestCase):
     def test_without_data_the_server_says_409(self):
         client = TestClient(self.create_app(self.settings))        # carregador real, pasta vazia
         r = client.post("/analyze", json=PAYLOAD)
-        self.assertEqual((r.status_code, r.json()["error"]["code"]), (409, "data_unavailable"))
+        self.assertEqual((r.status_code, r.json()["error"]["code"]), (409, "earth_engine_not_configured"))
 
     def test_cors_only_for_the_known_origins(self):
         ok = self.client.get("/health", headers={"Origin": "https://joselio-joao.github.io"})

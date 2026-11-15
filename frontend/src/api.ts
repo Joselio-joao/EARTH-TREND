@@ -36,19 +36,34 @@ export type ApiCatalog = {
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://earthtrend-ai-api.onrender.com').replace(/\/$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
-  });
-  if (!response.ok) {
-    let detail = '';
-    try {
-      const body = await response.json();
-      detail = body?.error?.message || body?.detail?.map?.((item: any) => `${(item.loc || []).join('.')}: ${item.msg}`).join('; ') || body?.detail || body?.message || '';
-    } catch { /* resposta sem JSON */ }
-    throw new Error(detail ? `API ${response.status}: ${detail}` : `API ${response.status}: o servidor rejeitou os dados enviados.`);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 95_000);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
+    });
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const body = await response.json();
+        detail = body?.error?.message || body?.detail?.map?.((item: any) => `${(item.loc || []).join('.')}: ${item.msg}`).join('; ') || body?.detail || body?.message || '';
+      } catch { /* resposta sem JSON */ }
+      if (response.status === 429) throw new Error(detail || 'O serviço está ocupado. Aguarda um pouco antes de repetir a análise.');
+      if (response.status >= 500) throw new Error(detail || 'O serviço de análise está temporariamente indisponível. Os dados não foram substituídos.');
+      throw new Error(detail ? `API ${response.status}: ${detail}` : `API ${response.status}: verifica os parâmetros do pedido.`);
+    }
+    return await response.json() as T;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('A consulta excedeu o tempo de espera da aplicação. O servidor pode ainda estar a concluir o pedido; evita enviar várias tentativas seguidas.');
+    }
+    if (error instanceof TypeError) throw new Error('Não foi possível contactar o servidor. Verifica a ligação à internet e tenta novamente mais tarde.');
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-  return response.json() as Promise<T>;
 }
 
 export async function loadApiCatalog(): Promise<ApiCatalog> {

@@ -13,6 +13,14 @@ DEFAULT_ORIGINS = [
 ]
 
 
+def _bounded_int(env, key, default, minimum, maximum):
+    try:
+        value = int(env.get(key, default))
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, value))
+
+
 def _split(value, default):
     if value is None or not value.strip():
         return list(default)
@@ -26,7 +34,8 @@ class Settings:
     allowed_origins: list = field(default_factory=lambda: list(DEFAULT_ORIGINS))
     min_years: int = 10            # anos mínimos com dados para concluir uma tendência
     max_values: int = 20_000_000   # células x passos de tempo que um pedido pode carregar
-    max_concurrent: int = 2        # análises em paralelo (protege a memória do servidor)
+    max_concurrent: int = 1        # uma análise de cada vez no plano gratuito
+    max_months: int = 420          # limite preventivo: 35 anos de observações mensais
     ee_project_id: str = ""
     ee_service_account_json: str = ""
 
@@ -49,9 +58,10 @@ class Settings:
         if env.get("EARTHTREND_DATA_DIR"):
             s.data_dir = Path(env["EARTHTREND_DATA_DIR"])
         s.allowed_origins = _split(env.get("EARTHTREND_ALLOWED_ORIGINS"), DEFAULT_ORIGINS)
-        s.min_years = int(env.get("EARTHTREND_MIN_YEARS", s.min_years))
-        s.max_values = int(env.get("EARTHTREND_MAX_VALUES", s.max_values))
-        s.max_concurrent = int(env.get("EARTHTREND_MAX_CONCURRENT", s.max_concurrent))
+        s.min_years = _bounded_int(env, "EARTHTREND_MIN_YEARS", s.min_years, 3, 100)
+        s.max_values = _bounded_int(env, "EARTHTREND_MAX_VALUES", s.max_values, 10000, 100000000)
+        s.max_concurrent = _bounded_int(env, "EARTHTREND_MAX_CONCURRENT", s.max_concurrent, 1, 2)
+        s.max_months = _bounded_int(env, "EARTHTREND_MAX_MONTHS", s.max_months, 12, 600)
         s.ee_project_id = env.get("EARTHTREND_EE_PROJECT_ID", "").strip()
         s.ee_service_account_json = env.get("EARTHTREND_EE_SERVICE_ACCOUNT_JSON", "")
         return s

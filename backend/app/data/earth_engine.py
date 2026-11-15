@@ -6,6 +6,7 @@ As credenciais Earth Engine permanecem exclusivamente no backend.
 """
 import hashlib
 import json
+import logging
 import threading
 import time
 from collections import OrderedDict
@@ -24,6 +25,8 @@ _CACHE_TTL_SECONDS = 6 * 60 * 60
 _CACHE_MAX_ENTRIES = 48
 _SERIES_CACHE = OrderedDict()
 _CACHE_LOCK = threading.Lock()
+_LOG = logging.getLogger("earthtrend.earth_engine")
+_AUTH_RETRY_SECONDS = 60
 
 
 class EarthEngineLoader:
@@ -33,7 +36,7 @@ class EarthEngineLoader:
         self.project_id = (project_id or "").strip()
         self.service_account_json = service_account_json
         self._ee = None
-        self._init_error = None
+        self._init_error_at = 0.0
         self._lock = threading.Lock()
 
     @property
@@ -48,19 +51,25 @@ class EarthEngineLoader:
     def _client(self):
         if self._ee is not None:
             return self._ee
-        if self._init_error:
-            raise ApiError(503, "earth_engine_auth_failed", self._init_error)
+        if self._init_error_at and time.monotonic() - self._init_error_at < _AUTH_RETRY_SECONDS:
+            raise ApiError(503, "earth_engine_auth_failed",
+                           "A autenticação do Earth Engine falhou recentemente. O servidor tentará novamente em breve.")
         if not self.configured:
             raise ApiError(409, "earth_engine_not_configured",
                            "O Google Earth Engine ainda não está autenticado no servidor.")
         with self._lock:
             if self._ee is not None:
                 return self._ee
-            if self._init_error:
-                raise ApiError(503, "earth_engine_auth_failed", self._init_error)
+            if self._init_error_at and time.monotonic() - self._init_error_at < _AUTH_RETRY_SECONDS:
+                raise ApiError(503, "earth_engine_auth_failed",
+                               "A autenticação do Earth Engine falhou recentemente. O servidor tentará novamente em breve.")
             try:
                 import ee
                 from google.oauth2 import service_account
+
+                # Limita pedidos síncronos getInfo() e chamadas do cliente EE a 90 s.
+                # A interface espera 95 s, dando margem para devolver um erro claro.
+                ee.data.setDeadline(90_000)
 
                 info = json.loads(self.service_account_json)
                 credentials = service_account.Credentials.from_service_account_info(
@@ -72,11 +81,12 @@ class EarthEngineLoader:
                 self._ee = ee
                 return ee
             except Exception as exc:
-                self._init_error = (
-                    "Não foi possível autenticar no Earth Engine. Confirme o registo do projecto, "
-                    "a API activada e as permissões da conta de serviço. Detalhe técnico: %s" % str(exc)[:400]
-                )
-                raise ApiError(503, "earth_engine_auth_failed", self._init_error) from exc
+                self._init_error_at = time.monotonic()
+                _LOG.exception("Falha ao autenticar no Earth Engine")
+                raise ApiError(
+                    503, "earth_engine_auth_failed",
+                    "Não foi possível autenticar no Earth Engine. Confirme o projecto, a API e as permissões da conta de serviço."
+                ) from exc
 
     def _geometry(self, ee, region):
         bbox = region["bbox"]
@@ -256,9 +266,22 @@ class EarthEngineLoader:
 
             records = ee.List(offsets.iterate(append_month, ee.List([]))).getInfo()
         except Exception as exc:
+            detail = str(exc)
+            lowered = detail.lower()
+            dataset_name = dataset.get("name", dataset.get("id"))
+            if "too many concurrent aggregations" in lowered or "quota" in lowered or "rate limit" in lowered:
+                raise ApiError(429, "earth_engine_busy",
+                               "O serviço de dados está temporariamente sobrecarregado ao processar %s. "
+                               "Aguarde um pouco e tente novamente com um período menor." % dataset_name) from exc
+            if "deadline" in lowered or "timed out" in lowered or "timeout" in lowered:
+                raise ApiError(504, "earth_engine_timeout",
+                               "A consulta de %s demorou mais do que o limite do serviço. "
+                               "Reduza o período ou a região e tente novamente." % dataset_name) from exc
+            _LOG.exception("Falha na consulta Earth Engine: dataset=%s", dataset_name)
             raise ApiError(502, "earth_engine_query_failed",
-                           "O Earth Engine não conseguiu calcular a série mensal de %s: %s" %
-                           (dataset.get("name", dataset.get("id")), str(exc)[:400])) from exc
+                           "O Earth Engine não conseguiu calcular a série mensal de %s. "
+                           "Verifique a disponibilidade do produto e tente novamente. "
+                           "Os detalhes técnicos foram registados no servidor." % dataset_name) from exc
 
         rows = []
         for record in records or []:
