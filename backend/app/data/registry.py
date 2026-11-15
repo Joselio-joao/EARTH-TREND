@@ -44,7 +44,16 @@ class Registry:
 
     @staticmethod
     def public_dataset(d):
-        return {k: d[k] for k in PUBLIC_DATASET_KEYS if k in d}
+        out = {k: d[k] for k in PUBLIC_DATASET_KEYS if k in d}
+        visualization = (d.get("earth_engine") or {}).get("visualization") or {}
+        if visualization:
+            out["map_range"] = {
+                "min": visualization.get("min"),
+                "max": visualization.get("max"),
+                "unit": d.get("display_unit") or d.get("native_unit"),
+                "palette": visualization.get("palette", []),
+            }
+        return out
 
     # ----------------------------------------------------------------- regiões
 

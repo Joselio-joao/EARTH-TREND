@@ -31,6 +31,28 @@ def regions(request: Request):
     return {"regions": _svc(request).list_regions()}
 
 
+@router.get("/maps/preview", tags=["mapas"], summary="Raster temporal real do Google Earth Engine")
+def map_preview(request: Request,
+                dataset_id: str = Query(..., min_length=1, max_length=64),
+                region_id: str = Query(..., min_length=1, max_length=64),
+                start: str = Query(..., min_length=4, max_length=10),
+                end: str = Query(..., min_length=4, max_length=10)):
+    image, dataset, region = _svc(request).map_preview({
+        "dataset_id": dataset_id, "region_id": region_id, "start": start, "end": end,
+    })
+    return Response(
+        content=image,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "X-EarthTrend-Map-Source": "Google Earth Engine",
+            "X-EarthTrend-Dataset": dataset.get("id", ""),
+            "X-EarthTrend-Region": region.get("name", ""),
+            "X-EarthTrend-Statistic": "Média temporal das imagens disponíveis no período",
+        },
+    )
+
+
 @router.post("/analyze", tags=["análise"], summary="Executa uma análise de tendência e guarda o resultado")
 def analyze(body: AnalysisRequest, request: Request):
     return _svc(request).analyze(body.model_dump())

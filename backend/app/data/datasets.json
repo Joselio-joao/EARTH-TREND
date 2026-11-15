@@ -18,12 +18,21 @@
       "group": null,
       "value_kind": "mean_rate",
       "native_unit": "mm/hr",
-      "accepted_units": ["mm/day", "mm/hr"],
+      "accepted_units": [
+        "mm/day",
+        "mm/hr"
+      ],
       "resolution": "monthly",
       "source_cadence": "mensal",
       "spatial_resolution_deg": 0.1,
       "valid_min": 0,
-      "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
+      "file_patterns": [
+        "*.nc4",
+        "*.nc",
+        "*.HDF5",
+        "*.hdf5",
+        "*.h5"
+      ],
       "coverage_note": "Cobertura mensal confirmada de junho de 2000 a setembro de 2025; o Final Run tem atraso de publicação.",
       "coverage_start": "2000-06",
       "coverage_end": "2025-09",
@@ -32,7 +41,23 @@
         "band": "precipitation",
         "scale_m": 11132,
         "aggregation": "Média espacial da taxa média mensal de precipitação",
-        "temporal_aggregation": "valor mensal do produto IMERG"
+        "temporal_aggregation": "valor mensal do produto IMERG",
+        "visualization": {
+          "min": 0,
+          "max": 0.8,
+          "palette": [
+            "#313695",
+            "#4575b4",
+            "#74add1",
+            "#abd9e9",
+            "#e0f3f8",
+            "#ffffbf",
+            "#fee090",
+            "#fdae61",
+            "#f46d43",
+            "#a50026"
+          ]
+        }
       },
       "limitations": [
         "As estimativas de precipitação por satélite podem ter menor desempenho em zonas costeiras e terreno complexo.",
@@ -61,7 +86,9 @@
       "group": null,
       "value_kind": "state",
       "native_unit": "index",
-      "accepted_units": ["index"],
+      "accepted_units": [
+        "index"
+      ],
       "display_unit": "NDVI (adimensional)",
       "resolution": "monthly",
       "source_cadence": "16 dias",
@@ -69,7 +96,13 @@
       "coverage_note": "Catálogo Earth Engine consultado: início em fevereiro de 2000 e dados publicados até outubro de 2026; a disponibilidade mais recente pode variar.",
       "coverage_start": "2000-02",
       "coverage_end": "2026-10",
-      "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
+      "file_patterns": [
+        "*.nc4",
+        "*.nc",
+        "*.HDF5",
+        "*.hdf5",
+        "*.h5"
+      ],
       "earth_engine": {
         "collection": "MODIS/061/MOD13Q1",
         "band": "NDVI",
@@ -79,7 +112,19 @@
         "scale_m": 250,
         "quality_filter": "Apenas pixels com SummaryQA = 0 (boa qualidade)",
         "aggregation": "Média espacial regional de NDVI",
-        "temporal_aggregation": "Média mensal dos compósitos MODIS de 16 dias disponíveis"
+        "temporal_aggregation": "Média mensal dos compósitos MODIS de 16 dias disponíveis",
+        "visualization": {
+          "min": 0,
+          "max": 0.9,
+          "palette": [
+            "#8c510a",
+            "#d8b365",
+            "#f6e8c3",
+            "#c7eae5",
+            "#5ab4ac",
+            "#01665e"
+          ]
+        }
       },
       "limitations": [
         "NDVI é um índice espectral, não uma medição direta de biomassa ou saúde ecológica.",
@@ -105,7 +150,9 @@
       "group": null,
       "value_kind": "state",
       "native_unit": "index",
-      "accepted_units": ["index"],
+      "accepted_units": [
+        "index"
+      ],
       "display_unit": "EVI (adimensional)",
       "resolution": "monthly",
       "source_cadence": "16 dias",
@@ -113,7 +160,13 @@
       "coverage_note": "Catálogo Earth Engine consultado: início em fevereiro de 2000 e dados publicados até outubro de 2026; a disponibilidade mais recente pode variar.",
       "coverage_start": "2000-02",
       "coverage_end": "2026-10",
-      "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
+      "file_patterns": [
+        "*.nc4",
+        "*.nc",
+        "*.HDF5",
+        "*.hdf5",
+        "*.h5"
+      ],
       "earth_engine": {
         "collection": "MODIS/061/MOD13Q1",
         "band": "EVI",
@@ -123,7 +176,19 @@
         "scale_m": 250,
         "quality_filter": "Apenas pixels com SummaryQA = 0 (boa qualidade)",
         "aggregation": "Média espacial regional de EVI",
-        "temporal_aggregation": "Média mensal dos compósitos MODIS de 16 dias disponíveis"
+        "temporal_aggregation": "Média mensal dos compósitos MODIS de 16 dias disponíveis",
+        "visualization": {
+          "min": 0,
+          "max": 0.7,
+          "palette": [
+            "#8c510a",
+            "#d8b365",
+            "#f6e8c3",
+            "#c7eae5",
+            "#5ab4ac",
+            "#01665e"
+          ]
+        }
       },
       "limitations": [
         "EVI é um índice espectral, não uma medição direta de biomassa ou saúde ecológica.",
@@ -148,7 +213,10 @@
       "group": null,
       "value_kind": "state",
       "native_unit": "kg/m^2",
-      "accepted_units": ["kg/m^2", "kg m-2"],
+      "accepted_units": [
+        "kg/m^2",
+        "kg m-2"
+      ],
       "display_unit": "kg/m²",
       "resolution": "monthly",
       "source_cadence": "3 horas",
@@ -156,13 +224,30 @@
       "coverage_note": "Catálogo Earth Engine consultado: desde janeiro de 2000 até outubro de 2026; a disponibilidade mais recente pode variar.",
       "coverage_start": "2000-01",
       "coverage_end": "2026-10",
-      "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
+      "file_patterns": [
+        "*.nc4",
+        "*.nc",
+        "*.HDF5",
+        "*.hdf5",
+        "*.h5"
+      ],
       "earth_engine": {
         "collection": "NASA/GLDAS/V021/NOAH/G025/T3H",
         "band": "SoilMoi0_10cm_inst",
         "scale_m": 27830,
         "aggregation": "Média espacial regional da humidade do solo na camada superficial de 0–10 cm",
-        "temporal_aggregation": "Média mensal das estimativas instantâneas de 3 em 3 horas"
+        "temporal_aggregation": "Média mensal das estimativas instantâneas de 3 em 3 horas",
+        "visualization": {
+          "min": 0,
+          "max": 35,
+          "palette": [
+            "#a6611a",
+            "#dfc27d",
+            "#f5f5f5",
+            "#80cdc1",
+            "#018571"
+          ]
+        }
       },
       "limitations": [
         "GLDAS é um sistema de assimilação/modelação terrestre; estes valores não são medições directas em cada ponto.",
@@ -187,7 +272,9 @@
       "group": null,
       "value_kind": "state",
       "native_unit": "°C",
-      "accepted_units": ["°C"],
+      "accepted_units": [
+        "°C"
+      ],
       "display_unit": "°C",
       "resolution": "monthly",
       "source_cadence": "3 horas",
@@ -195,7 +282,13 @@
       "coverage_note": "Catálogo Earth Engine consultado: desde janeiro de 2000 até outubro de 2026; a disponibilidade mais recente pode variar.",
       "coverage_start": "2000-01",
       "coverage_end": "2026-10",
-      "file_patterns": ["*.nc4", "*.nc", "*.HDF5", "*.hdf5", "*.h5"],
+      "file_patterns": [
+        "*.nc4",
+        "*.nc",
+        "*.HDF5",
+        "*.hdf5",
+        "*.h5"
+      ],
       "earth_engine": {
         "collection": "NASA/GLDAS/V021/NOAH/G025/T3H",
         "band": "Tair_f_inst",
@@ -203,7 +296,18 @@
         "source_unit": "K",
         "scale_m": 27830,
         "aggregation": "Média espacial regional da temperatura do ar",
-        "temporal_aggregation": "Média mensal das estimativas instantâneas de 3 em 3 horas"
+        "temporal_aggregation": "Média mensal das estimativas instantâneas de 3 em 3 horas",
+        "visualization": {
+          "min": 0,
+          "max": 35,
+          "palette": [
+            "#313695",
+            "#74add1",
+            "#ffffbf",
+            "#fdae61",
+            "#a50026"
+          ]
+        }
       },
       "limitations": [
         "GLDAS é um sistema de assimilação/modelação terrestre; estes valores não são medições directas em cada ponto.",
