@@ -13,6 +13,14 @@ DEFAULT_ORIGINS = [
 ]
 
 
+def _bounded_int(env, key, default, minimum, maximum):
+    try:
+        value = int(env.get(key, default))
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, value))
+
+
 def _split(value, default):
     if value is None or not value.strip():
         return list(default)
@@ -50,16 +58,10 @@ class Settings:
         if env.get("EARTHTREND_DATA_DIR"):
             s.data_dir = Path(env["EARTHTREND_DATA_DIR"])
         s.allowed_origins = _split(env.get("EARTHTREND_ALLOWED_ORIGINS"), DEFAULT_ORIGINS)
-        s.min_years = int(env.get("EARTHTREND_MIN_YEARS", s.min_years))
-        s.max_values = int(env.get("EARTHTREND_MAX_VALUES", s.max_values))
-        try:
-            s.max_concurrent = max(1, min(2, int(env.get("EARTHTREND_MAX_CONCURRENT", s.max_concurrent))))
-        except (TypeError, ValueError):
-            s.max_concurrent = 1
-        try:
-            s.max_months = max(12, min(600, int(env.get("EARTHTREND_MAX_MONTHS", s.max_months))))
-        except (TypeError, ValueError):
-            s.max_months = 420
+        s.min_years = _bounded_int(env, "EARTHTREND_MIN_YEARS", s.min_years, 3, 100)
+        s.max_values = _bounded_int(env, "EARTHTREND_MAX_VALUES", s.max_values, 10000, 100000000)
+        s.max_concurrent = _bounded_int(env, "EARTHTREND_MAX_CONCURRENT", s.max_concurrent, 1, 2)
+        s.max_months = _bounded_int(env, "EARTHTREND_MAX_MONTHS", s.max_months, 12, 600)
         s.ee_project_id = env.get("EARTHTREND_EE_PROJECT_ID", "").strip()
         s.ee_service_account_json = env.get("EARTHTREND_EE_SERVICE_ACCOUNT_JSON", "")
         return s
