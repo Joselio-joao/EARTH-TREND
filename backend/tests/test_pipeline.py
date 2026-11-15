@@ -78,7 +78,9 @@ class Units(unittest.TestCase):
         r = run(cube=make_cube(unit=None))
         self.assertFalse(r["provenance"]["unit_declared_in_data"])
         self.assertTrue(any("não declaram unidades" in w for w in r["warnings"]))
-        self.assertAlmostEqual(r["series"]["values"][0], 730.0)
+        # O registo GPM declara mm/hr; sem unidade no ficheiro, o fallback
+        # usa essa unidade e converte 2 mm/hr para o total anual (17 520 mm).
+        self.assertAlmostEqual(r["series"]["values"][0], 2.0 * 24.0 * 365.0)
 
 
 class Scales(unittest.TestCase):
