@@ -11,6 +11,7 @@ import time
 from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 import numpy as np
 
@@ -273,3 +274,48 @@ class EarthEngineLoader:
 
         self._store_rows(cache_key, rows)
         return self._to_series(rows, dataset, spec)
+
+
+    def render_map_png(self, dataset, region, start, end, dimensions=1000):
+        """Renderiza um raster temporal real do Earth Engine como PNG para pré-visualização."""
+        spec = self._spec(dataset)
+        if not spec:
+            raise ApiError(409, "map_not_supported",
+                           "Este conjunto de dados ainda não tem uma camada raster Earth Engine configurada.")
+        visualization = spec.get("visualization")
+        if not isinstance(visualization, dict):
+            raise ApiError(409, "map_style_missing",
+                           "Este produto ainda não tem uma escala cartográfica documentada.")
+        ee = self._client()
+        geometry = self._geometry(ee, region)
+        start_date = "%04d-%02d-01" % (start[0], start[1])
+        end_month = (end[0] + 1, 1) if end[1] == 12 else (end[0], end[1] + 1)
+        end_date = "%04d-%02d-01" % end_month
+        try:
+            collection = self._prepared_collection(ee, spec, start_date, end_date)
+            image = collection.mean().select(spec["band"]).clip(geometry)
+            rendered = image.visualize(
+                min=float(visualization["min"]),
+                max=float(visualization["max"]),
+                palette=list(visualization["palette"]),
+            )
+            thumb_url = rendered.getThumbURL({
+                "region": geometry,
+                "dimensions": int(dimensions),
+                "format": "png",
+            })
+            request = Request(thumb_url, headers={"User-Agent": "EarthTrendAI/1.0"})
+            with urlopen(request, timeout=75) as response:
+                content_type = response.headers.get("Content-Type", "")
+                if "image/png" not in content_type:
+                    raise ValueError("Earth Engine não devolveu uma imagem PNG.")
+                image_bytes = response.read(8 * 1024 * 1024 + 1)
+            if not image_bytes or len(image_bytes) > 8 * 1024 * 1024:
+                raise ValueError("A imagem cartográfica está vazia ou excede o limite de 8 MB.")
+            return image_bytes
+        except ApiError:
+            raise
+        except Exception as exc:
+            raise ApiError(502, "earth_engine_map_failed",
+                           "Não foi possível gerar o raster de %s: %s" %
+                           (dataset.get("name", dataset.get("id")), str(exc)[:300])) from exc
