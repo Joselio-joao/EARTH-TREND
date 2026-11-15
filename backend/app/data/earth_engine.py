@@ -255,9 +255,21 @@ class EarthEngineLoader:
 
             records = ee.List(offsets.iterate(append_month, ee.List([]))).getInfo()
         except Exception as exc:
+            detail = str(exc)
+            lowered = detail.lower()
+            dataset_name = dataset.get("name", dataset.get("id"))
+            if "too many concurrent aggregations" in lowered or "quota" in lowered or "rate limit" in lowered:
+                raise ApiError(429, "earth_engine_busy",
+                               "O serviço de dados está temporariamente sobrecarregado ao processar %s. "
+                               "Aguarde um pouco e tente novamente com um período menor." % dataset_name) from exc
+            if "deadline" in lowered or "timed out" in lowered or "timeout" in lowered:
+                raise ApiError(504, "earth_engine_timeout",
+                               "A consulta de %s demorou mais do que o limite do serviço. "
+                               "Reduza o período ou a região e tente novamente." % dataset_name) from exc
             raise ApiError(502, "earth_engine_query_failed",
-                           "O Earth Engine não conseguiu calcular a série mensal de %s: %s" %
-                           (dataset.get("name", dataset.get("id")), str(exc)[:400])) from exc
+                           "O Earth Engine não conseguiu calcular a série mensal de %s. "
+                           "Verifique a disponibilidade do produto e tente novamente. Detalhe: %s" %
+                           (dataset_name, detail[:250])) from exc
 
         rows = []
         for record in records or []:
