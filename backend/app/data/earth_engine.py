@@ -66,6 +66,10 @@ class EarthEngineLoader:
                 import ee
                 from google.oauth2 import service_account
 
+                # Limita pedidos síncronos getInfo() e chamadas do cliente EE a 90 s.
+                # A interface espera 95 s, dando margem para devolver um erro claro.
+                ee.data.setDeadline(90_000)
+
                 info = json.loads(self.service_account_json)
                 credentials = service_account.Credentials.from_service_account_info(
                     info,
