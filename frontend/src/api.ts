@@ -36,7 +36,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
   });
-  if (!response.ok) throw new Error(`API ${response.status}`);
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const body = await response.json();
+      detail = body?.error?.message || body?.detail?.map?.((item: any) => `${(item.loc || []).join('.')}: ${item.msg}`).join('; ') || body?.detail || body?.message || '';
+    } catch { /* resposta sem JSON */ }
+    throw new Error(detail ? `API ${response.status}: ${detail}` : `API ${response.status}: o servidor rejeitou os dados enviados.`);
+  }
   return response.json() as Promise<T>;
 }
 
