@@ -17,6 +17,7 @@ export type DatasetRecord = {
   display_unit?: string;
   note?: string;
   provider?: string;
+  map_range?: { min: number; max: number; unit?: string };
 };
 
 export type ProvinceRecord = {
@@ -73,4 +74,14 @@ export async function runAnalysis(payload: {
   scale: string; question: string; include_trend_map?: boolean;
 }) {
   return request<any>('/analyze', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function mapPreviewUrl(payload: {dataset_id:string;region_id:string;start:string;end:string}) {
+  const query = new URLSearchParams({
+    dataset_id: payload.dataset_id,
+    region_id: payload.region_id,
+    start: payload.start,
+    end: payload.end,
+  });
+  return `${API_BASE}/maps/preview?${query.toString()}`;
 }
