@@ -9,7 +9,7 @@ from ..errors import ApiError
 PUBLIC_DATASET_KEYS = (
     "id", "name", "family", "variable_id", "variable_label", "status", "provider", "version",
     "product_short_name", "product_url", "doi", "citation", "license", "value_kind", "native_unit",
-    "resolution", "spatial_resolution_deg", "coverage_note", "coverage_start", "coverage_end", "limitations", "to_confirm", "note",
+    "resolution", "source_cadence", "spatial_resolution_deg", "spatial_resolution_m", "display_unit", "coverage_note", "coverage_start", "coverage_end", "limitations", "to_confirm", "note",
 )
 
 
