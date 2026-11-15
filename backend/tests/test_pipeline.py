@@ -42,6 +42,9 @@ class AnnualTrend(unittest.TestCase):
         self.assertEqual(tm["directions"][0][0], "increasing")
         self.assertTrue(tm["significant"][0][0])
         self.assertLess(tm["p_values"][0][0], 0.001)
+        self.assertLess(tm["q_values"][0][0], 0.05)
+        self.assertEqual(tm["multiple_testing"]["method"], "Benjamini-Yekutieli")
+        self.assertEqual(tm["multiple_testing"]["valid_cells"], 25)
         self.assertAlmostEqual(tm["slopes_per_year"][0][0], 3.65, delta=0.5)
 
     def test_trend_map_is_not_calculated_by_default(self):
