@@ -9,6 +9,24 @@ from app.data.earth_engine import EarthEngineLoader
 
 
 class EarthEngineInitialization(unittest.TestCase):
+    def test_map_permission_error_is_sanitized(self):
+        with self.assertRaises(Exception) as ctx:
+            EarthEngineLoader._raise_map_error(
+                {"name": "NASA GPM"},
+                RuntimeError("Permission 'earthengine.thumbnails.create' denied on project"),
+            )
+        self.assertEqual(ctx.exception.code, "earth_engine_permission_denied")
+        self.assertNotIn("thumbnails.create", ctx.exception.message)
+
+    def test_other_map_errors_do_not_expose_raw_details(self):
+        with self.assertRaises(Exception) as ctx:
+            EarthEngineLoader._raise_map_error(
+                {"name": "NASA GPM"},
+                RuntimeError("internal endpoint https://example.invalid/private"),
+            )
+        self.assertEqual(ctx.exception.code, "earth_engine_map_failed")
+        self.assertNotIn("example.invalid", ctx.exception.message)
+
     def test_deadline_is_set_only_after_initialize(self):
         events = []
         fake_ee = SimpleNamespace(
