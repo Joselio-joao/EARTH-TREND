@@ -3,6 +3,7 @@ import json
 import os
 import re
 import tempfile
+import time
 import uuid
 from pathlib import Path
 
@@ -25,8 +26,9 @@ def summary(result):
 
 
 class ResultStore:
-    def __init__(self, directory):
+    def __init__(self, directory, retention_days=30):
         self.dir = Path(directory)
+        self.retention_seconds = max(1, int(retention_days)) * 86400
 
     @staticmethod
     def new_id():
@@ -41,6 +43,7 @@ class ResultStore:
         if not self.valid_id(rid):
             raise ValueError("id de resultado inválido")
         self.dir.mkdir(parents=True, exist_ok=True)
+        self.prune_expired()
         fd, tmp = tempfile.mkstemp(dir=str(self.dir), suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -60,8 +63,29 @@ class ResultStore:
         path = self.dir / ("%s.json" % rid)
         if not path.is_file():
             return None
+        try:
+            if time.time() - path.stat().st_mtime > self.retention_seconds:
+                path.unlink(missing_ok=True)
+                return None
+        except OSError:
+            return None
         with open(path, encoding="utf-8") as fh:
             return json.load(fh)
+
+    def prune_expired(self):
+        """Remove resultados que ultrapassaram o prazo de retenção."""
+        if not self.dir.is_dir():
+            return 0
+        cutoff = time.time() - self.retention_seconds
+        removed = 0
+        for path in self.dir.glob("*.json"):
+            try:
+                if path.stat().st_mtime < cutoff:
+                    path.unlink()
+                    removed += 1
+            except OSError:
+                continue
+        return removed
 
     def list(self, limit=20):
         if not self.dir.is_dir():
