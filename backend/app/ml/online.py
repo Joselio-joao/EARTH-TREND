@@ -53,12 +53,20 @@ def _features(result):
     except (TypeError, ValueError):
         years = float(len(values))
     quality = result.get("data_quality") or {}
-    expected = series.get("expected_observations") or quality.get("expected_steps") or len(values)
+    valid_fraction = quality.get("valid_fraction")
     try:
-        expected = max(len(values), int(expected))
+        valid_fraction = float(valid_fraction)
     except (TypeError, ValueError):
-        expected = len(values)
-    missing_ratio = max(0.0, min(1.0, 1.0 - len(values) / expected))
+        valid_fraction = float("nan")
+    if math.isfinite(valid_fraction):
+        missing_ratio = max(0.0, min(1.0, 1.0 - valid_fraction))
+    else:
+        expected = series.get("expected_observations") or len(values)
+        try:
+            expected = max(len(values), int(expected))
+        except (TypeError, ValueError):
+            expected = len(values)
+        missing_ratio = max(0.0, min(1.0, 1.0 - len(values) / expected))
     mk = trend.get("mann_kendall") or {}
     try:
         p_value = float(mk.get("p_value", 1.0))
