@@ -241,30 +241,31 @@ class EarthEngineLoader:
             start_ee_date = ee.Date(start_date)
             offsets = ee.List.sequence(0, month_count - 1)
 
-            # Não usar List.map com um reduceRegion por mês: o Earth Engine
-            # pode executar essas agregações em paralelo e rejeitar a consulta
-            # com "Too many concurrent aggregations". List.iterate encadeia
-            # os meses numa única acumulação server-side.
-            def append_month(offset, accumulator):
+            # Primeiro agrega temporalmente cada mês numa imagem e depois empilha
+            # as imagens mensais numa única imagem multibanda. Assim, em vez de
+            # executar até 420 reduceRegion (um por mês), o Earth Engine executa
+            # uma única redução espacial para toda a série. Os meses sem imagens
+            # mantêm uma banda mascarada e são devolvidos como ausentes (None).
+            def make_month_image(offset):
                 month_start = start_ee_date.advance(ee.Number(offset), "month")
                 month_end = month_start.advance(1, "month")
                 monthly = collection.filterDate(month_start, month_end)
-                has_images = monthly.size().gt(0)
-                value = ee.Algorithms.If(
-                    has_images,
-                    monthly.mean().reduceRegion(
-                        reducer=ee.Reducer.mean(),
-                        geometry=geometry,
-                        scale=int(spec["scale_m"]),
-                        maxPixels=1e13,
-                        bestEffort=bool(spec.get("best_effort", False)),
-                    ).get(spec["band"]),
-                    None,
+                empty = ee.Image.constant(0).rename(spec["band"]).updateMask(
+                    ee.Image.constant(0)
                 )
-                record = ee.Dictionary({"timestamp": month_start.millis(), "value": value})
-                return ee.List(accumulator).add(record)
+                return ee.Image(
+                    ee.Algorithms.If(monthly.size().gt(0), monthly.mean(), empty)
+                ).rename(spec["band"])
 
-            records = ee.List(offsets.iterate(append_month, ee.List([]))).getInfo()
+            month_images = offsets.map(make_month_image)
+            monthly_stack = ee.ImageCollection.fromImages(month_images).toBands()
+            band_values = monthly_stack.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=geometry,
+                scale=int(spec["scale_m"]),
+                maxPixels=1e13,
+                bestEffort=bool(spec.get("best_effort", False)),
+            ).getInfo() or {}
         except Exception as exc:
             detail = str(exc)
             lowered = detail.lower()
@@ -284,13 +285,14 @@ class EarthEngineLoader:
                            "Os detalhes técnicos foram registados no servidor." % dataset_name) from exc
 
         rows = []
-        for record in records or []:
-            timestamp, value = record.get("timestamp"), record.get("value")
-            if timestamp is None or value is None:
+        for index in range(month_count):
+            year = start[0] + (start[1] - 1 + index) // 12
+            month = (start[1] - 1 + index) % 12 + 1
+            # toBands() prefixa cada banda com o índice da imagem na coleção.
+            value = band_values.get("%d_%s" % (index, spec["band"]))
+            if value is None:
                 continue
-            dt = datetime.fromtimestamp(float(timestamp) / 1000.0, tz=timezone.utc)
-            rows.append(((dt.year, dt.month), float(value)))
-        rows.sort(key=lambda item: item[0])
+            rows.append(((year, month), float(value)))
         if not rows:
             raise ApiError(422, "earth_engine_no_data",
                            "O Earth Engine não devolveu observações para esta região e período.")
