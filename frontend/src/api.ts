@@ -40,7 +40,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const timeout = window.setTimeout(() => controller.abort(), 95_000);
   try {
     const method = String(options?.method || 'GET').toUpperCase();
-    const headers = { ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}), ...(options?.headers || {}) };
+    const headers = new Headers(options?.headers || {});
+    if (method !== 'GET' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     const response = await fetch(`${API_BASE}${path}`, {
       ...options,
       method,
