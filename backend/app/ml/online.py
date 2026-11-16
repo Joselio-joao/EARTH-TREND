@@ -28,6 +28,11 @@ def _finite(values):
 
 
 def _features(result):
+    if result.get("status") != "ok":
+        return None
+    trend = result.get("trend") or {}
+    if trend.get("direction") == "inconclusive":
+        return None
     series = result.get("series") or {}
     values = _finite(series.get("values"))
     if len(values) < 3:
