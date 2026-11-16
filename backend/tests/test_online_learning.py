@@ -48,7 +48,7 @@ class OnlineLearningTests(unittest.TestCase):
     def test_does_not_train_without_a_valid_time_series(self):
         with tempfile.TemporaryDirectory() as directory:
             learner = OnlineLearningStore(Path(directory))
-            result = learner.observe("modis_ndvi", "annual", {"series": {"values": [None, "bad"]}})
+            result = learner.observe("modis_ndvi", "annual", {"status": "inconclusive", "series": {"values": [10, 11, 12]}})
             self.assertEqual(result["status"], "insufficient_data")
             self.assertEqual(learner.status()["model_count"], 0)
 
