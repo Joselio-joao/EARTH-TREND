@@ -6,7 +6,6 @@ real analyses and reports how unusual a new analysis looks against that baseline
 """
 import json
 import math
-import os
 import tempfile
 import threading
 from pathlib import Path
