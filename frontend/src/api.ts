@@ -39,10 +39,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 95_000);
   try {
+    const method = String(options?.method || 'GET').toUpperCase();
+    const headers = new Headers(options?.headers || {});
+    if (method !== 'GET' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     const response = await fetch(`${API_BASE}${path}`, {
       ...options,
+      method,
+      cache: method === 'GET' ? 'no-store' : options?.cache,
+      credentials: 'omit',
       signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
+      headers,
     });
     if (!response.ok) {
       let detail = '';
@@ -67,11 +73,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function loadApiCatalog(): Promise<ApiCatalog> {
-  const [datasets, regions] = await Promise.all([
+  // Safari should still receive the model catalogue if the optional region
+  // request fails independently (or is served from a stale cache).
+  const [datasetsResult, regionsResult] = await Promise.allSettled([
     request<{ datasets: DatasetRecord[] }>('/datasets'),
     request<{ regions: ProvinceRecord[] }>('/regions'),
   ]);
-  return { datasets: datasets.datasets, provinces: regions.regions };
+  if (datasetsResult.status === 'rejected') throw datasetsResult.reason;
+  return {
+    datasets: Array.isArray(datasetsResult.value.datasets) ? datasetsResult.value.datasets : [],
+    provinces: regionsResult.status === 'fulfilled' && Array.isArray(regionsResult.value.regions)
+      ? regionsResult.value.regions : [],
+  };
 }
 
 export async function checkApi(): Promise<boolean> {

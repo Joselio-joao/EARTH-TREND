@@ -12,6 +12,7 @@ from . import __version__
 from .analysis import pipeline, timeops
 from .errors import ApiError
 from .reports import report as reports
+from .ml.online import OnlineLearningStore
 
 DEFAULT_DATASET = "gpm_imerg_monthly"
 MAX_QUESTION = 300
@@ -30,6 +31,7 @@ class Service:
         self.registry = registry
         self.loader = loader
         self.store = store
+        self.learning = OnlineLearningStore(settings.models_dir)
         self.slots = threading.BoundedSemaphore(settings.max_concurrent)
 
     # ------------------------------------------------------------- catálogo
@@ -175,6 +177,15 @@ class Service:
         finally:
             self.slots.release()
 
+        try:
+            result["ml_insight"] = self.learning.observe(dataset["id"], req["scale"], result)
+        except Exception:
+            log.exception("Falha ao atualizar a memória de aprendizagem automática")
+            result["ml_insight"] = {
+                "status": "unavailable",
+                "message": "A análise científica foi concluída, mas a memória de aprendizagem não pôde ser atualizada.",
+            }
+
         if PROFILE_ANALYSIS:
             def profile_summary(profiler):
                 if profiler is None:
@@ -250,6 +261,9 @@ class Service:
 
     def list_results(self, limit=20):
         return self.store.list(limit)
+
+    def learning_status(self):
+        return self.learning.status()
 
     def report(self, rid, fmt="html"):
         result = self.get_result(rid)

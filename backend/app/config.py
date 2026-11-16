@@ -40,6 +40,10 @@ class Settings:
     ee_service_account_json: str = ""
 
     @property
+    def models_dir(self):
+        return Path(self.data_dir) / "models"
+
+    @property
     def raw_dir(self):
         return Path(self.data_dir) / "raw"
 

@@ -56,6 +56,8 @@ class Flow(ServiceBase):
         self.assertRegex(r["id"], r"^[0-9a-f]{32}$")
         self.assertTrue(r["created_at"].endswith("Z"))
         self.assertEqual(r["trend"]["direction"], "increasing")
+        self.assertEqual(r["ml_insight"]["status"], "learning")
+        self.assertEqual(r["ml_insight"]["training_examples"], 1)
         self.assertEqual(r["links"]["self"], "/results/" + r["id"])
         self.assertEqual(self.svc.get_result(r["id"]), json.loads(json.dumps(r)))
         self.assertEqual(self.svc.list_results()[0]["id"], r["id"])
