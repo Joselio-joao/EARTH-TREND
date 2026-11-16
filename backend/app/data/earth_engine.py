@@ -253,9 +253,12 @@ class EarthEngineLoader:
                 empty = ee.Image.constant(0).rename(spec["band"]).updateMask(
                     ee.Image.constant(0)
                 )
-                return ee.Image(
+                image = ee.Image(
                     ee.Algorithms.If(monthly.size().gt(0), monthly.mean(), empty)
                 ).rename(spec["band"])
+                # toBands() usa system:index como prefixo; defini-lo evita nomes
+                # implícitos e mantém a correspondência índice -> mês previsível.
+                return image.set("system:index", ee.Number(offset).format("%d"))
 
             month_images = offsets.map(make_month_image)
             monthly_stack = ee.ImageCollection.fromImages(month_images).toBands()
