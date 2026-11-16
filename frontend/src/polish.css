@@ -52,3 +52,39 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 .ml-learning-row b,.ml-learning-row span{display:block}.ml-learning-row b{font-size:12px;color:#1d3b2a}.ml-learning-row span{font-size:9px;color:#71877a;margin-top:5px}.ml-learning-row>strong{font-size:20px;color:#347b55;font-variant-numeric:tabular-nums}
 .ml-insight>p{font-size:11px;line-height:1.65;color:#51665a;margin:13px 0 7px}.ml-insight>small{font-size:9px;line-height:1.6;color:#89988e}
 @keyframes et-sweep{0%{left:-35%}70%,100%{left:120%}}@keyframes et-pulse{50%{transform:scale(1.06);box-shadow:0 0 0 7px rgba(108,194,135,.1)}}@keyframes et-bars{from{transform:scaleY(.45);opacity:.65}to{transform:scaleY(1);opacity:1}}
+
+
+/* Refined scientific analysis progress */
+.analysis-loading{margin:18px 0 22px;padding:clamp(17px,3vw,25px);border:1px solid #d7e7dc;border-radius:18px;background:radial-gradient(ellipse at 100% 0%,rgba(123,205,151,.14),transparent 42%),linear-gradient(145deg,#fff 0%,#f5faf6 100%);box-shadow:0 22px 60px rgba(16,45,29,.075)}
+.analysis-loading-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.analysis-loading-head{display:flex;align-items:center;gap:13px;color:#377e59}
+.analysis-spinner{width:44px;height:44px;display:grid;place-items:center;flex:none;border-radius:14px;background:linear-gradient(145deg,#e2f5e8,#f0faf2);color:#28744c;box-shadow:inset 0 0 0 1px #d4ebdb}
+.analysis-spinner svg{animation:et-spin 2.6s linear infinite}
+.analysis-loading-head b{font-size:14px;letter-spacing:-.02em}
+.analysis-loading-head span{font-size:10px;color:#75877b;margin-top:5px}
+.analysis-clock{min-width:82px;text-align:right}
+.analysis-clock strong{display:block;color:#173b29;font-size:21px;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.analysis-clock span{display:block;margin-top:2px;color:#87968c;font-size:9px;text-transform:uppercase;letter-spacing:.09em}
+.analysis-progress-track{height:5px;margin:20px 0 17px;overflow:hidden;border-radius:20px;background:#e6efe8}
+.analysis-progress-track i{display:block;width:34%;height:100%;border-radius:20px;background:linear-gradient(90deg,#39885c,#9be6b2,#39885c);background-size:200% 100%;animation:et-progress 2.1s ease-in-out infinite}
+.analysis-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.analysis-stage{min-width:0;display:flex;align-items:flex-start;gap:8px;padding:11px 9px;border:1px solid #e7eee9;border-radius:12px;background:rgba(255,255,255,.76)}
+.analysis-stage>span{width:23px;height:23px;display:grid;place-items:center;flex:none;border-radius:7px;background:#edf2ee;color:#718177;font-size:9px;font-weight:800}
+.analysis-stage>div{min-width:0;flex:1}
+.analysis-stage b,.analysis-stage small{display:block}
+.analysis-stage b{font-size:9px;line-height:1.4;color:#4d6054}
+.analysis-stage small{margin-top:4px;color:#87958c;font-size:8px;line-height:1.45}
+.analysis-stage.complete{border-color:#d8eadc;background:#f8fcf9}
+.analysis-stage.complete>span{background:#dff2e4;color:#28744c}
+.analysis-stage.complete>svg{flex:none;color:#39885c;margin:3px 0 0 auto}
+.analysis-stage.active{border-color:#b9dec5;background:linear-gradient(145deg,#f1faf3,#fff);box-shadow:0 6px 18px rgba(44,119,72,.07)}
+.analysis-stage.active>span{background:#d9f0e0;color:#267448}
+.analysis-stage.active>i{width:7px;height:7px;flex:none;margin:8px 2px 0 auto;border-radius:50%;background:#39905c;box-shadow:0 0 0 4px rgba(57,144,92,.12);animation:et-pulse-dot 1.4s ease-in-out infinite}
+.analysis-stage.pending{opacity:.7}
+.analysis-loading>p{margin:14px 0 0;padding-top:12px;border-top:1px solid #e6eee8;color:#75857b;font-size:9px;line-height:1.65}
+@keyframes et-spin{to{transform:rotate(360deg)}}
+@keyframes et-progress{0%{transform:translateX(-115%);background-position:0 0}100%{transform:translateX(320%);background-position:100% 0}}
+@keyframes et-pulse-dot{50%{transform:scale(.78);opacity:.55}}
+@media(max-width:760px){.analysis-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.analysis-stage{padding:10px 8px}.analysis-loading-top{align-items:flex-start}.analysis-clock strong{font-size:18px}}
+@media(max-width:390px){.analysis-loading{padding:14px}.analysis-spinner{width:38px;height:38px}.analysis-loading-head b{font-size:12px}.analysis-stage b{font-size:8px}.analysis-stage small{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.analysis-spinner svg,.analysis-progress-track i,.analysis-stage.active>i{animation:none!important}}
