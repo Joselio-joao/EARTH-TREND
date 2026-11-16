@@ -52,7 +52,8 @@ def _features(result):
         years = max(1.0, float(years))
     except (TypeError, ValueError):
         years = float(len(values))
-    expected = series.get("expected_observations") or len(values)
+    quality = result.get("data_quality") or {}
+    expected = series.get("expected_observations") or quality.get("expected_steps") or len(values)
     try:
         expected = max(len(values), int(expected))
     except (TypeError, ValueError):
