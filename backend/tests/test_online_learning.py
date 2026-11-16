@@ -7,6 +7,7 @@ from app.ml.online import OnlineLearningStore
 
 def sample(values=None, slope=0.05, p_value=0.4):
     return {
+        "status": "ok",
         "series": {"values": values or [10.0, 10.5, 9.8, 10.2, 10.1]},
         "period": {"n_years": 20},
         "trend": {
