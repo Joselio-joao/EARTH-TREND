@@ -12,6 +12,7 @@ from . import __version__
 from .analysis import pipeline, timeops
 from .errors import ApiError
 from .reports import report as reports
+from .ml.online import OnlineLearningStore
 
 DEFAULT_DATASET = "gpm_imerg_monthly"
 MAX_QUESTION = 300
