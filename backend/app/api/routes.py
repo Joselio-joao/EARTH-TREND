@@ -24,6 +24,11 @@ def health(request: Request):
     return _svc(request).health()
 
 
+@router.get("/ml/status", tags=["aprendizagem"], summary="Estado dos modelos de aprendizagem adaptativa")
+def ml_status(request: Request):
+    return _svc(request).learning_status()
+
+
 @router.get("/datasets", tags=["dados"], summary="Datasets registados e se já têm dados no servidor")
 def datasets(request: Request):
     return {"datasets": _svc(request).list_datasets()}
