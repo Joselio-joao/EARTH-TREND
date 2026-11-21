@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Activity, ArrowRight, BarChart3, BookOpen, Check, ChevronDown, CircleHelp, CloudRain, Database, Download, Earth, Expand, FileText, Filter, Gauge, Globe2, Layers3, LineChart, Map as MapIcon, Menu, Minimize2, Moon, Network, PanelLeft, Play, RotateCcw, Satellite, Search, Settings, ShieldCheck, Sparkles, Sprout, Sun, Table2, TrendingDown, TrendingUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './styles.css';
 import './polish.css';
-import { ApiStatus, CopernicusCollection, CopernicusItem, DatasetRecord, ProvinceRecord, checkApi, loadApiCatalog, loadRegionGeoJSON, mapPreviewUrl, runAnalysis, searchCatalog, searchCopernicusCollections, searchCopernicusItems } from './api';
+import { ApiStatus, CopernicusCollection, CopernicusItem, DatasetRecord, NasaCmrCollection, ProvinceRecord, checkApi, loadApiCatalog, loadRegionGeoJSON, mapPreviewUrl, runAnalysis, searchCatalog, searchCopernicusCollections, searchCopernicusItems, searchNasaCmrCollections } from './api';
 
 type Page='overview'|'explore'|'lab'|'data'|'investigations'|'methodology'|'settings'|'terms';
 type Settings={language:'pt'|'en';map:'Relief'|'Satellite'|'Heat'|'Contour';chart:'Linha'|'Barras'|'Dispersão'|'Área'|'Histograma'|'Circular';compact:boolean};
@@ -149,6 +149,11 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
  const [results,setResults]=useState<DatasetRecord[]|null>(null);
  const [searchBusy,setSearchBusy]=useState(false);
  const [searchError,setSearchError]=useState('');
+ const [nasaQuery,setNasaQuery]=useState('GPM IMERG');
+ const [nasaResults,setNasaResults]=useState<NasaCmrCollection[]|null>(null);
+ const [nasaBusy,setNasaBusy]=useState(false);
+ const [nasaError,setNasaError]=useState('');
+ const [nasaNotice,setNasaNotice]=useState('');
  const [copernicusQuery,setCopernicusQuery]=useState('Sentinel-2');
  const [copernicusResults,setCopernicusResults]=useState<CopernicusCollection[]|null>(null);
  const [copernicusBusy,setCopernicusBusy]=useState(false);
@@ -172,6 +177,17 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
    setResults(datasets.filter(d=>[d.name,d.variable_label,d.provider,d.id].join(' ').toLowerCase().includes(q)));
    setSearchError('A API não respondeu. Estes resultados são apenas a filtragem local do catálogo carregado.');
   }finally{setSearchBusy(false)}
+ };
+ const submitNasa=async()=>{
+  setNasaBusy(true);setNasaError('');setNasaNotice('');
+  try{
+   const r=await searchNasaCmrCollections(nasaQuery,12);
+   setNasaResults(r.results||[]);
+   setNasaNotice(r.notice||'Resultados de metadados NASA CMR.');
+  }catch(e){
+   setNasaResults(null);
+   setNasaError(e instanceof Error?e.message:'Não foi possível consultar o NASA CMR.');
+  }finally{setNasaBusy(false)}
  };
  const submitItems=async()=>{
   setItemsBusy(true);setItemsError('');setItemsNotice('');setCopernicusItems(null);
@@ -204,6 +220,23 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
    <small className="panel-note">Pesquisa o catálogo interno e mantém a distinção entre produtos disponíveis e integrações planeadas.</small>
    {searchError&&<p className="field-hint">{searchError}</p>}
    {results&&<div className="catalog-search-results"><b>{results.length} resultado(s)</b>{results.map(d=><div className="catalog-search-item" key={d.id}><div><strong>{d.name}</strong><span>{d.provider||'Fonte por identificar'} · {d.coverage_start||'—'} a {d.coverage_end||'—'}</span></div><span className={d.status==='available'?'phase active':'phase'}>{d.status==='available'?'Ligado':'Planeado'}</span></div>)}</div>}
+  </div>
+  <div className="panel nasa-cmr-panel">
+   <div className="panel-title"><div className="panel-title-name"><Satellite size={17}/><h3>NASA Earthdata · CMR</h3></div><span className="phase active">CATÁLOGO ONLINE</span></div>
+   <p className="panel-note">Pesquisa ao vivo no Common Metadata Repository da NASA. Experimenta GPM IMERG, MODIS, Landsat, SMAP, SWOT ou precipitação.</p>
+   <div className="catalog-search"><input value={nasaQuery} onChange={e=>setNasaQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')submitNasa()}} placeholder="Ex.: GPM IMERG, MODIS, SMAP…"/><button className="button dark" onClick={submitNasa} disabled={nasaBusy||nasaQuery.trim().length<2}><Search size={15}/>{nasaBusy?'A consultar…':'Pesquisar NASA CMR'}</button></div>
+   {nasaError&&<p className="field-hint">{nasaError}</p>}
+   {nasaNotice&&<p className="panel-note">{nasaNotice}</p>}
+   {nasaResults&&<><div className="catalog-result-heading"><b>{nasaResults.length} colecção(ões) encontradas</b><span>Fonte: NASA Earthdata · CMR</span></div>
+    {nasaResults.length===0&&<p className="panel-note">Não foram encontradas colecções. Tenta outro termo ou nome de produto.</p>}
+    <div className="external-catalog-grid">{nasaResults.map(item=><article className="external-catalog-card nasa-cmr-result-card" key={item.concept_id}>
+     <div className="external-card-top"><span className="phase active">METADADOS AO VIVO</span><span className="tag">{item.provider}</span></div>
+     <h3>{item.title}</h3><p>{item.summary||'O catálogo NASA não forneceu um resumo para esta colecção.'}</p>
+     <dl><dt>Short name</dt><dd>{item.short_name||'—'}</dd><dt>Versão</dt><dd>{item.version||'—'}</dd><dt>Identificador</dt><dd>{item.concept_id}</dd><dt>Período</dt><dd>{item.start_date||'—'} até {item.end_date||'presente/não indicado'}</dd><dt>Granulações</dt><dd>{item.granule_count===null||item.granule_count===undefined?'Não indicado':item.granule_count.toLocaleString('pt-PT')}</dd><dt>Cloud hosted</dt><dd>{item.cloud_hosted===true?'Sim':item.cloud_hosted===false?'Não':'Não indicado'}</dd></dl>
+     <div className="nasa-cmr-links"><a href={item.metadata_url} target="_blank" rel="noreferrer" className="external-source-link">Metadados CMR <ArrowRight size={14}/></a>{item.data_url&&<a href={item.data_url} target="_blank" rel="noreferrer" className="external-source-link">Acesso aos dados <ArrowRight size={14}/></a>}</div>
+    </article>)}</div>
+   </>}
+   <p className="panel-note">Esta é uma pesquisa de metadados e descoberta de colecções. O acesso e a descarga de cada ficheiro podem exigir Earthdata Login e dependem das condições do produto. Nenhum ficheiro NASA é descarregado por esta pesquisa.</p>
   </div>
   <div className="panel copernicus-live-panel">
    <div className="panel-title"><div className="panel-title-name"><Globe2 size={17}/><h3>Pesquisa ao vivo · Copernicus STAC</h3></div><span className="phase active">CATÁLOGO ONLINE</span></div>
