@@ -26,8 +26,8 @@ PROVIDERS = [
      "role": "Live search of collection and Angola-intersecting item metadata; product download and raster analysis are separate integrations."},
     {"id": "earth_engine", "name": "Google Earth Engine", "kind": "catalog_and_data", "status": "active",
      "role": "Current provider for configured analysis and raster preview products."},
-    {"id": "nasa_earthdata", "name": "NASA Earthdata / CMR", "kind": "catalog_discovery", "status": "planned",
-     "role": "Independent discovery of NASA collections and granules; access/authentication varies by product."},
+    {"id": "nasa_earthdata_cmr", "name": "NASA Earthdata CMR", "kind": "live_catalog_discovery", "status": "active",
+     "role": "Live NASA collection and granule metadata search using CMR; data download/authentication are separate."},
     {"id": "ges_disc", "name": "NASA GES DISC", "kind": "data_provider", "status": "planned",
      "role": "Direct access paths for hydrology and atmospheric products, subject to product access rules."},
     {"id": "lp_daac", "name": "NASA LP DAAC", "kind": "data_provider", "status": "planned",
@@ -286,6 +286,174 @@ def search_copernicus_items(collection_id, start_date, end_date, limit=10, max_c
             _ITEMS_CACHE.pop(oldest, None)
     return result
 
+
+
+NASA_CMR_ROOT = "https://cmr.earthdata.nasa.gov/search"
+_NASA_CMR_CACHE = {}
+_NASA_CMR_CACHE_LOCK = threading.Lock()
+_NASA_CMR_CACHE_TTL_SECONDS = 180
+
+
+def _cache_read(key):
+    now = time.monotonic()
+    with _NASA_CMR_CACHE_LOCK:
+        cached = _NASA_CMR_CACHE.get(key)
+        if cached and now - cached[0] < _NASA_CMR_CACHE_TTL_SECONDS:
+            return cached[1]
+    return None
+
+
+def _cache_write(key, value):
+    with _NASA_CMR_CACHE_LOCK:
+        _NASA_CMR_CACHE[key] = (time.monotonic(), value)
+        if len(_NASA_CMR_CACHE) > 64:
+            oldest = min(_NASA_CMR_CACHE, key=lambda k: _NASA_CMR_CACHE[k][0])
+            _NASA_CMR_CACHE.pop(oldest, None)
+
+
+def _cmr_collection_summary(entry):
+    links = entry.get("links") or []
+    metadata_url = next((link.get("href") for link in links
+                         if isinstance(link, dict) and link.get("rel") in ("metadata", "http://esipfed.org/ns/fedsearch/1.1/metadata#")), None)
+    concept_id = entry.get("id")
+    temporal = entry.get("time_start") or entry.get("temporal")
+    return {
+        "id": concept_id,
+        "short_name": entry.get("short_name"),
+        "title": entry.get("title") or entry.get("dataset_id") or entry.get("short_name"),
+        "version": entry.get("version"),
+        "provider": entry.get("provider"),
+        "summary": entry.get("摘要") or entry.get("summary") or entry.get("description") or "",
+        "start_date": entry.get("time_start"),
+        "end_date": entry.get("time_end"),
+        "bbox": entry.get("boxes") or entry.get("bounding_boxes"),
+        "metadata_url": metadata_url or (f"https://cmr.earthdata.nasa.gov/search/concepts/{concept_id}" if concept_id else None),
+        "earthdata_url": f"https://search.earthdata.nasa.gov/search?q={requests.utils.quote(str(entry.get('short_name') or entry.get('title') or ''))}",
+        "source": "NASA Earthdata Common Metadata Repository (CMR)",
+        "catalog_status": "live_metadata",
+    }
+
+
+def search_nasa_cmr_collections(query="", limit=10):
+    """Live CMR collection discovery. Search metadata only; no granules are downloaded."""
+    clean_query = str(query or "").strip()[:120]
+    safe_limit = max(1, min(int(limit), 20))
+    key = ("collections", clean_query.lower(), safe_limit)
+    cached = _cache_read(key)
+    if cached is not None:
+        return cached
+    params = {"page_size": safe_limit, "sort_key": "-score", "include_facets": "false"}
+    if clean_query:
+        params["keyword"] = clean_query
+    try:
+        response = requests.get(f"{NASA_CMR_ROOT}/collections.json", params=params,
+                               headers={"Accept": "application/json"}, timeout=(3.05, 20))
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        raise CatalogProviderError("A pesquisa NASA Earthdata CMR não respondeu correctamente. Tenta novamente.") from exc
+    entries = ((payload.get("feed") or {}).get("entry") or []) if isinstance(payload, dict) else []
+    results = [_cmr_collection_summary(entry) for entry in entries if isinstance(entry, dict)]
+    hits = response.headers.get("CMR-Hits")
+    result = {
+        "query": clean_query,
+        "count": len(results),
+        "total_hits": int(hits) if hits and hits.isdigit() else None,
+        "results": results,
+        "source": "NASA Earthdata CMR",
+        "catalogue_url": "https://cmr.earthdata.nasa.gov/search/collections",
+        "retrieval": "metadata_only",
+        "notice": "Pesquisa de coleções e metadados CMR. A disponibilidade de granules, ficheiros e acesso pode variar por produto e autenticação.",
+    }
+    _cache_write(key, result)
+    return result
+
+
+def search_nasa_cmr_granules(short_name, start_date, end_date, limit=10, max_cloud_cover=None):
+    """Live granule metadata search within an Angola bounding box, optionally cloud-filtered."""
+    clean_short_name = str(short_name or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", clean_short_name):
+        raise ValueError("Indica um short name NASA válido.")
+    try:
+        start = date.fromisoformat(str(start_date))
+        end = date.fromisoformat(str(end_date))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("As datas devem estar no formato AAAA-MM-DD.") from exc
+    if end < start:
+        raise ValueError("A data final não pode ser anterior à inicial.")
+    if (end - start).days > 366:
+        raise ValueError("Cada pesquisa pode abranger no máximo 366 dias.")
+    if max_cloud_cover is not None:
+        try:
+            max_cloud_cover = float(max_cloud_cover)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("A cobertura máxima de nuvens deve ser um número entre 0 e 100.") from exc
+        if not 0 <= max_cloud_cover <= 100:
+            raise ValueError("A cobertura máxima de nuvens deve estar entre 0 e 100.")
+    safe_limit = max(1, min(int(limit), 20))
+    key = ("granules", clean_short_name.lower(), start.isoformat(), end.isoformat(), safe_limit, max_cloud_cover)
+    cached = _cache_read(key)
+    if cached is not None:
+        return cached
+    params = {
+        "short_name": clean_short_name,
+        "temporal": f"{start.isoformat()}T00:00:00Z,{end.isoformat()}T23:59:59Z",
+        "bounding_box": "11.6,-18.1,24.1,-4.2",
+        "page_size": safe_limit,
+        "sort_key": "-start_date",
+    }
+    if max_cloud_cover is not None:
+        params["cloud_cover"] = f",{max_cloud_cover}"
+    try:
+        response = requests.get(f"{NASA_CMR_ROOT}/granules.json", params=params,
+                               headers={"Accept": "application/json"}, timeout=(3.05, 20))
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        raise CatalogProviderError("A pesquisa NASA CMR de granules não respondeu correctamente. Confirma o short name e tenta novamente.") from exc
+    entries = ((payload.get("feed") or {}).get("entry") or []) if isinstance(payload, dict) else []
+    items = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        links = entry.get("links") or []
+        data_links = [link.get("href") for link in links if isinstance(link, dict)
+                      and link.get("rel") in ("data", "http://esipfed.org/ns/fedsearch/1.1/data#")]
+        browse_links = [link.get("href") for link in links if isinstance(link, dict)
+                        and link.get("rel") in ("browse", "http://esipfed.org/ns/fedsearch/1.1/browse#")]
+        items.append({
+            "id": entry.get("id"),
+            "title": entry.get("title"),
+            "producer_granule_id": entry.get("producer_granule_id"),
+            "short_name": entry.get("short_name") or clean_short_name,
+            "collection_concept_id": entry.get("collection_concept_id"),
+            "start_date": entry.get("time_start"),
+            "end_date": entry.get("time_end"),
+            "cloud_cover": float(entry["cloud_cover"]) if entry.get("cloud_cover") not in (None, "") else None,
+            "day_night": entry.get("day_night_flag"),
+            "size_mb": float(entry["size"]) if entry.get("size") not in (None, "") else None,
+            "data_links": data_links[:3],
+            "browse_links": browse_links[:2],
+            "metadata_url": f"https://cmr.earthdata.nasa.gov/search/concepts/{entry.get('id')}" if entry.get("id") else None,
+            "source": "NASA Earthdata CMR",
+            "catalog_status": "live_metadata",
+        })
+    hits = response.headers.get("CMR-Hits")
+    result = {
+        "short_name": clean_short_name,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "max_cloud_cover": max_cloud_cover,
+        "count": len(items),
+        "total_hits": int(hits) if hits and hits.isdigit() else None,
+        "items": items,
+        "source": "NASA Earthdata Common Metadata Repository (CMR)",
+        "spatial_scope": "Bounding box aproximada de Angola (11.6°E–24.1°E, 18.1°S–4.2°S); pode incluir áreas vizinhas, não é uma intersecção com a fronteira nacional.",
+        "retrieval": "metadata_only",
+        "notice": "Os resultados são metadados de granules. Os ficheiros não foram descarregados nem analisados; links de dados podem requerer Earthdata Login ou permissões específicas.",
+    }
+    _cache_write(key, result)
+    return result
 
 def engine_status():
     return {"name": "EarthTrend Search", "phase": "catalog_search",
