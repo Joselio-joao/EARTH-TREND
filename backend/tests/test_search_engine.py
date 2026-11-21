@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from app.data.search_engine import (CatalogProviderError, _COLLECTIONS_CACHE, engine_status,
-                                    normalize, search_catalog, search_copernicus_collections)
+from app.data.search_engine import (CatalogProviderError, _COLLECTIONS_CACHE, _ITEMS_CACHE, engine_status,
+                                    normalize, search_catalog, search_copernicus_collections, search_copernicus_items)
 
 
 class CatalogSearchTests(unittest.TestCase):
@@ -77,6 +77,51 @@ class CatalogSearchTests(unittest.TestCase):
             with self.assertRaises(CatalogProviderError):
                 search_copernicus_collections("Sentinel", 5)
         _COLLECTIONS_CACHE.clear()
+
+    def test_copernicus_items_returns_product_metadata_for_angola(self):
+        _ITEMS_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "features": [{
+                "id": "S2A_TEST_ITEM",
+                "collection": "sentinel-2-l2a",
+                "bbox": [12.1, -8.2, 12.8, -7.6],
+                "properties": {
+                    "datetime": "2026-10-10T09:35:31Z",
+                    "platform": "sentinel-2a",
+                    "instruments": ["msi"],
+                    "eo:cloud_cover": 12.5,
+                    "gsd": 10,
+                    "processing:level": "L2A",
+                    "product:type": "S2MSI2A",
+                },
+                "links": [{"rel": "self", "href": "https://stac.example/item/1"}],
+            }],
+            "links": [],
+        }
+        with patch("app.data.search_engine.requests.post", return_value=response) as post:
+            result = search_copernicus_items("sentinel-2-l2a", "2026-10-01", "2026-10-31", 5)
+
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(result["items"][0]["id"], "S2A_TEST_ITEM")
+        self.assertEqual(result["items"][0]["cloud_cover"], 12.5)
+        self.assertEqual(result["items"][0]["gsd_m"], 10.0)
+        self.assertEqual(result["items"][0]["item_url"], "https://stac.example/item/1")
+        self.assertEqual(result["retrieval"], "metadata_only")
+        body = post.call_args.kwargs["json"]
+        self.assertEqual(body["collections"], ["sentinel-2-l2a"])
+        self.assertEqual(body["datetime"], "2026-10-01T00:00:00Z/2026-10-31T23:59:59Z")
+        self.assertEqual(body["intersects"]["type"], "MultiPolygon")
+        _ITEMS_CACHE.clear()
+
+    def test_copernicus_item_search_rejects_invalid_date_range(self):
+        with self.assertRaises(ValueError):
+            search_copernicus_items("sentinel-2-l2a", "2026-10-31", "2026-10-01", 5)
+
+    def test_copernicus_item_search_rejects_ranges_over_one_year(self):
+        with self.assertRaises(ValueError):
+            search_copernicus_items("sentinel-2-l2a", "2024-01-01", "2025-01-03", 5)
 
     def test_provider_status_discloses_phase(self):
         status = engine_status()
