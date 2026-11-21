@@ -106,7 +106,7 @@ export async function runAnalysis(payload: {
 
 export async function searchCatalog(query: string): Promise<{query:string;count:number;results:DatasetRecord[];engine:any}> {
   const params = new URLSearchParams({q:query,limit:'30'});
-  return request(`/search/catalog?${params.toString()}`);
+  return request<{query:string;count:number;results:DatasetRecord[];engine:any}>(`/search/catalog?${params.toString()}`);
 }
 
 export async function loadRegionGeoJSON(regionId: string): Promise<any> {
