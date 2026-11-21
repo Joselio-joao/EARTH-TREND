@@ -1,6 +1,6 @@
 # EarthTrend Search — architecture and migration plan
 
-**Status:** phase 3 in progress (local search + Copernicus collection and Angola item discovery)  
+**Status:** phase 4 in progress (local search + Copernicus collection/items + NASA CMR collection discovery)  
 **Current data engine:** Google Earth Engine remains the active provider for products configured in the backend.  
 **Goal:** build a source-neutral data discovery and ingestion layer, then add direct NASA providers in parallel.
 
@@ -17,7 +17,7 @@
 
 - Google Earth Engine: **active**; existing configured datasets.
 - Copernicus Data Space STAC: **active for live collection and Angola-intersecting item metadata discovery**; asset retrieval and raster analysis are not yet integrated.
-- NASA Earthdata CMR: **planned** discovery adapter; collection/granule search and links.
+- NASA Earthdata CMR: **active for live collection metadata discovery**; granule search and direct download remain separate integrations.
 - NASA GES DISC: **planned** direct product retrieval, including access checks and formats.
 - NASA LP DAAC: **planned** direct land-product retrieval.
 - NASA PO.DAAC: **planned** ocean/surface-water discovery and retrieval.
@@ -81,13 +81,23 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 - Results are metadata-only: assets/bands are not downloaded and no Copernicus raster is run through the trend engine.
 - Tests cover item mapping, spatial request, time-range validation and response-cache behavior.
 
+## Phase 4 implemented — NASA CMR collection discovery
+
+- Live endpoint: `/search/nasa/cmr/collections?q=GPM%20IMERG&limit=12`.
+- Uses the public NASA CMR collection search API with keyword search and JSON response metadata.
+- Returns CMR concept ID, collection title, short name, version, provider/DAAC, temporal coverage, declared granule count, cloud-hosted flag and official metadata/data links.
+- Search requires at least two characters, caps the response at 20 records, applies a 15-second upstream timeout, a 20-requests/minute rate limit and a 5-minute cache.
+- Data Library includes a NASA Earthdata CMR panel, separate from the Copernicus STAC panel.
+- Discovery is public metadata only; downloading product files may require Earthdata Login and product-specific access conditions.
+- Automated tests cover field mapping, query parameters, caching and upstream failure behavior.
+- This connector currently discovers collections, not granules. NASA CMR granule search and direct file access are subsequent integration steps.
+
 ## Next phases
 
-1. Add pagination and additional item-level quality controls (e.g. instrument and processing-level filters), preserving the STAC query and source metadata.
-2. Add NASA CMR collection/granule discovery with product IDs and official links.
-3. Add one direct data adapter for a product with reliable public access and a testable sample file.
-4. Add provider selection in analysis settings and a provenance panel for every result.
-5. Compare normalized outputs against Earth Engine, with unit, quality-flag and temporal-coverage checks, before any engine migration.
+1. Add NASA CMR granule discovery by collection, region and period, preserving concept IDs, granule IDs, cloud cover where provided and official access links.
+2. Add one direct data adapter for a product with reliable public access and a testable sample file.
+3. Add provider selection in analysis settings and a provenance panel for every result.
+4. Compare normalized outputs against Earth Engine, with unit, quality-flag and temporal-coverage checks, before any engine migration.
 
 
 ## Endpoint maintenance note
