@@ -20,7 +20,7 @@ O repositório contém uma interface React/Vite responsiva e um backend FastAPI 
 - **Análise configurada:** Google Earth Engine continua a ser o fornecedor activo para os produtos ligados ao pipeline actual.
 - **Estatísticas de tendência:** o resumo inclui medidas descritivas complementares, variação absoluta e percentual, dispersão e amplitude, sem confundir descrição com significância estatística.
 - **Mapa de Angola:** o contorno nacional é servido como GeoJSON local no frontend, pelo que permanece visível sem backend. Esta camada nacional não contém divisões provinciais.
-- **EarthTrend Search:** pesquisa o catálogo local e consulta ao vivo metadados de coleções do Copernicus STAC. A descoberta de metadados não significa que os ficheiros externos já sejam descarregados ou analisados.
+- **EarthTrend Search:** pesquisa o catálogo local, encontra coleções Copernicus ao vivo e consulta registos Sentinel que intersectam o contorno nacional de Angola, filtrados por período. Os resultados externos são metadados; os ficheiros e bandas ainda não são descarregados nem analisados.
 - **Catálogo multi-fonte:** inclui NASA, Copernicus, NOAA, USGS, ESA e outras plataformas como fontes de pesquisa, com o estado de integração identificado.
 
 As séries e mapas de análise devem ser interpretados com a fonte, versão, cobertura temporal, unidade, qualidade e limitações apresentadas no resultado. Os dados externos ainda não integrados não são apresentados como disponíveis para análise.
@@ -54,4 +54,4 @@ A geometria foi derivada da camada geoBoundaries AGO ADM1 (ano representativo 20
 
 **Limitação importante:** a camada de origem contém 18 unidades administrativas e não representa a divisão político-administrativa atual de 21 províncias estabelecida pela Lei n.º 14/24, de 5 de Setembro de 2024. Por isso, o mapa offline não apresenta limites provinciais atuais. A aplicação só deverá disponibilizar análise provincial para a nova divisão depois de integrar uma fonte geográfica atualizada, com proveniência e licença verificadas.
 
-A atribuição, a proveniência e as limitações desta camada estão documentadas em `frontend/public/data/ANGOLA-NATIONAL-OUTLINE-SOURCE.md`.
+A atribuição, a proveniência e as limitações desta camada estão documentadas em `frontend/public/data/ANGOLA-NATIONAL-OUTLINE-SOURCE.md`. O mesmo contorno nacional é utilizado como geometria `intersects` na pesquisa de produtos Copernicus, sem afirmar precisão cadastral ou limites provinciais actuais.
