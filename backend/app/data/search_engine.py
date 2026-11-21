@@ -314,7 +314,7 @@ def _cache_write(key, value):
 def _cmr_collection_summary(entry):
     links = entry.get("links") or []
     metadata_url = next((link.get("href") for link in links
-                         if isinstance(link, dict) and link.get("rel") in ("metadata", "http://esipfed.org/ns/fedsearch/1.1/metadata#")), None)
+                         if isinstance(link, dict) and str(link.get("rel", "")).lower().endswith("metadata#")), None)
     concept_id = entry.get("id")
     temporal = entry.get("time_start") or entry.get("temporal")
     return {
@@ -456,6 +456,6 @@ def search_nasa_cmr_granules(short_name, start_date, end_date, limit=10, max_clo
     return result
 
 def engine_status():
-    return {"name": "EarthTrend Search", "phase": "catalog_search",
-            "message": "Pesquisa o catálogo interno, coleções Copernicus e registos de produtos que intersectam Angola; a descarga e análise raster de produtos externos ainda são integrações separadas.",
+    return {"name": "EarthTrend Search", "phase": "multi_source_catalog_search",
+            "message": "Pesquisa catálogo interno, coleções e granules NASA CMR, coleções e produtos Copernicus; a descarga e análise raster de produtos externos ainda são integrações separadas.",
             "providers": PROVIDERS}
