@@ -4,7 +4,7 @@ from fastapi.responses import Response
 
 from ..security import enforce_rate_limit
 from ..errors import ApiError
-from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, search_copernicus_items, engine_status
+from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, search_copernicus_items, search_nasa_cmr_collections, engine_status
 
 from .schemas import AnalysisRequest
 
@@ -46,6 +46,21 @@ def search_catalog_endpoint(request: Request, q: str = Query("", max_length=120)
     datasets = _svc(request).list_datasets()
     matches = search_catalog(datasets, q, limit)
     return {"query": q, "count": len(matches), "results": matches, "engine": engine_status()}
+
+
+@router.get("/search/nasa/cmr/collections", tags=["pesquisa"], summary="Pesquisa ao vivo de colecções NASA Earthdata CMR")
+def nasa_cmr_collections_endpoint(
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=120),
+    limit: int = Query(10, ge=1, le=20),
+):
+    enforce_rate_limit(request, "nasa_cmr_catalog", limit=20, window_seconds=60)
+    try:
+        return search_nasa_cmr_collections(q, limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except CatalogProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/search/copernicus/collections", tags=["pesquisa"], summary="Pesquisa ao vivo de coleções Copernicus STAC")
