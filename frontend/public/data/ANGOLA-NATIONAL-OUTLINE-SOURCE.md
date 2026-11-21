@@ -19,3 +19,7 @@ A aplicação deve usar uma camada administrativa atualizada e licenciada antes 
 - Distribuição geoBoundaries: atribuição CC BY 4.0, conforme a documentação do repositório de origem.
 
 Gerado a partir de `backend/data/regions/angola.geojson` já presente no repositório. Não são introduzidas novas fronteiras provinciais.
+
+## Utilização no EarthTrend Search
+
+A mesma geometria dissolvida é copiada para `backend/data/regions/angola-national-outline.geojson` e usada como filtro espacial `intersects` nas consultas STAC de produtos Copernicus. O objectivo é limitar a descoberta de produtos à área nacional de referência. A camada não é usada como fronteira provincial, limite cadastral ou base para decisões legais.
