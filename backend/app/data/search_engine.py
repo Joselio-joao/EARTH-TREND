@@ -314,7 +314,7 @@ def _cache_write(key, value):
 def _cmr_collection_summary(entry):
     links = entry.get("links") or []
     metadata_url = next((link.get("href") for link in links
-                         if isinstance(link, dict) and str(link.get("rel", "")).lower().endswith("metadata#")), None)
+                         if isinstance(link, dict) and (str(link.get("rel", "")).lower() == "metadata" or str(link.get("rel", "")).lower().endswith("metadata#"))), None)
     concept_id = entry.get("id")
     temporal = entry.get("time_start") or entry.get("temporal")
     return {
@@ -431,7 +431,7 @@ def search_nasa_cmr_granules(short_name, start_date, end_date, limit=10, max_clo
             "end_date": entry.get("time_end"),
             "cloud_cover": float(entry["cloud_cover"]) if entry.get("cloud_cover") not in (None, "") else None,
             "day_night": entry.get("day_night_flag"),
-            "size_mb": float(entry["size"]) if entry.get("size") not in (None, "") else None,
+            "size_mb": float(entry.get("granule_size") or entry.get("size")) if entry.get("granule_size") not in (None, "") or entry.get("size") not in (None, "") else None,
             "data_links": data_links[:3],
             "browse_links": browse_links[:2],
             "metadata_url": f"https://cmr.earthdata.nasa.gov/search/concepts/{entry.get('id')}" if entry.get("id") else None,
@@ -456,6 +456,6 @@ def search_nasa_cmr_granules(short_name, start_date, end_date, limit=10, max_clo
     return result
 
 def engine_status():
-    return {"name": "EarthTrend Search", "phase": "multi_source_catalog_search",
+    return {"name": "EarthTrend Search", "phase": "catalog_search", "phase_detail": "multi_source_catalog_search",
             "message": "Pesquisa catálogo interno, coleções e granules NASA CMR, coleções e produtos Copernicus; a descarga e análise raster de produtos externos ainda são integrações separadas.",
             "providers": PROVIDERS}
