@@ -1,6 +1,6 @@
 # EarthTrend Search — architecture and migration plan
 
-**Status:** phase 1 (local metadata search)  
+**Status:** phase 2 in progress (local metadata search + live Copernicus collection discovery)  
 **Current data engine:** Google Earth Engine remains the active provider for products configured in the backend.  
 **Goal:** build a source-neutral data discovery and ingestion layer, then add direct NASA providers in parallel.
 
@@ -16,6 +16,7 @@
 ## Provider status
 
 - Google Earth Engine: **active**; existing configured datasets.
+- Copernicus Data Space STAC: **active for live collection-metadata discovery**; product retrieval and analysis are not yet integrated.
 - NASA Earthdata CMR: **planned** discovery adapter; collection/granule search and links.
 - NASA GES DISC: **planned** direct product retrieval, including access checks and formats.
 - NASA LP DAAC: **planned** direct land-product retrieval.
@@ -49,6 +50,17 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 - analysis reproducibility and cache behavior;
 - automated tests and graceful provider outages.
 
+## Phase 2 implemented — Copernicus collection discovery
+
+- Live collection search endpoint: `/search/copernicus/collections?q=...`.
+- Uses the Copernicus Data Space Ecosystem STAC 1.1 catalogue endpoint announced in October 2026.
+- Search covers collection titles, descriptions and keywords via the STAC collection `q` parameter.
+- The backend applies a bounded result limit, timeout, per-client rate limit and short in-memory cache.
+- Search results preserve the collection ID, title, description, provider, declared license, temporal extent, spatial extent, keywords and official STAC URL.
+- UI is available in the Data Library as “Pesquisa ao vivo · Copernicus STAC”.
+- Automated tests cover result mapping, cache behavior and remote provider failure.
+- This is **catalogue discovery only**. It does not yet download products, fetch raster assets or run Copernicus observations through the trend engine.
+
 ## Phase 1 implemented
 
 - Local metadata search endpoint: /search/catalog.
@@ -59,8 +71,8 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 
 ## Next phases
 
-1. Validate the search endpoint and frontend build.
-2. Add remote CMR collection discovery with product IDs and official links.
-3. Add direct data adapters, beginning with a product that has reliable public access and small sample files.
+1. Add Copernicus item search constrained to Angola and a selected collection, keeping results metadata-only until access and file formats are validated.
+2. Add NASA CMR collection/granule discovery with product IDs and official links.
+3. Add one direct data adapter for a product with reliable public access and a testable sample file.
 4. Add provider selection in analysis settings and a provenance panel for every result.
-5. Compare results against Earth Engine and tests before any engine migration.
+5. Compare normalized outputs against Earth Engine, with unit, quality-flag and temporal-coverage checks, before any engine migration.
