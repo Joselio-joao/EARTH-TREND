@@ -157,6 +157,7 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
  const [itemCollection,setItemCollection]=useState('sentinel-2-l2a');
  const [itemStart,setItemStart]=useState('2026-10-01');
  const [itemEnd,setItemEnd]=useState('2026-10-31');
+ const [maxCloudCover,setMaxCloudCover]=useState('');
  const [copernicusItems,setCopernicusItems]=useState<CopernicusItem[]|null>(null);
  const [itemsBusy,setItemsBusy]=useState(false);
  const [itemsError,setItemsError]=useState('');
@@ -175,7 +176,8 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
  const submitItems=async()=>{
   setItemsBusy(true);setItemsError('');setItemsNotice('');setCopernicusItems(null);
   try{
-   const r=await searchCopernicusItems(itemCollection,itemStart,itemEnd,10);
+   const cloudLimit=maxCloudCover===''?undefined:Number(maxCloudCover);
+   const r=await searchCopernicusItems(itemCollection,itemStart,itemEnd,10,cloudLimit);
    setCopernicusItems(r.items||[]);
    setItemsNotice(r.notice||'Resultados de metadados STAC para a área de Angola.');
   }catch(e){
@@ -217,17 +219,18 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
    </article>)}</div></>}
    <div className="copernicus-item-search">
     <div className="copernicus-item-heading"><div><span className="eyebrow">ETAPA SEGUINTE · PRODUTOS</span><h3>Encontrar imagens sobre Angola</h3></div><span className="phase active">STAC ITEM SEARCH</span></div>
-    <p className="panel-note">Pesquisa registos de produtos por coleção e período, com intersecção espacial pelo contorno nacional de referência de Angola.</p>
+    <p className="panel-note">Pesquisa registos de produtos por coleção, período e nebulosidade máxima, com intersecção espacial pelo contorno nacional de referência de Angola.</p>
     <div className="copernicus-item-filters">
      <label>Coleção STAC<input value={itemCollection} onChange={e=>setItemCollection(e.target.value)} placeholder="sentinel-2-l2a"/></label>
      <label>Data inicial<input type="date" value={itemStart} onChange={e=>setItemStart(e.target.value)}/></label>
      <label>Data final<input type="date" value={itemEnd} onChange={e=>setItemEnd(e.target.value)}/></label>
+     <label>Nebulosidade máxima<select value={maxCloudCover} onChange={e=>setMaxCloudCover(e.target.value)}><option value="">Qualquer cobertura</option><option value="20">Até 20%</option><option value="40">Até 40%</option><option value="60">Até 60%</option><option value="80">Até 80%</option></select></label>
      <button className="button dark" onClick={submitItems} disabled={itemsBusy||!itemCollection.trim()||!itemStart||!itemEnd}><Search size={15}/>{itemsBusy?'A procurar produtos…':'Procurar produtos sobre Angola'}</button>
     </div>
     {itemsError&&<p className="field-hint">{itemsError}</p>}
     {itemsNotice&&<p className="panel-note">{itemsNotice}</p>}
     {copernicusItems&&<div className="copernicus-items-results">
-     <div className="catalog-result-heading"><b>{copernicusItems.length} produto(s) encontrados</b><span>{itemCollection} · {itemStart} a {itemEnd}</span></div>
+     <div className="catalog-result-heading"><b>{copernicusItems.length} produto(s) encontrados</b><span>{itemCollection} · {itemStart} a {itemEnd} · {maxCloudCover===''?'qualquer nebulosidade':'nuvens ≤ '+maxCloudCover+'%'}</span></div>
      {copernicusItems.length===0&&<p className="panel-note">Não foram encontrados produtos com estes filtros. Experimenta outro período ou coleção.</p>}
      <div className="external-catalog-grid">{copernicusItems.map(item=><article className="external-catalog-card copernicus-item-card" key={item.id}>
       <div className="external-card-top"><span className="phase active">PRODUTO LOCALIZADO</span><span className="tag">{item.processing_level||item.product_type||'STAC item'}</span></div>
