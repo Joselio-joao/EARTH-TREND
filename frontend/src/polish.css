@@ -152,3 +152,12 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 .copernicus-item-id{font:10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#6e7e73;overflow-wrap:anywhere}
 @media(max-width:850px){.copernicus-item-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.copernicus-item-filters label:first-child{grid-column:1/-1}.copernicus-item-filters .button{grid-column:1/-1;justify-content:center}}
 @media(max-width:460px){.copernicus-item-heading{align-items:flex-start;flex-direction:column}.copernicus-item-filters{grid-template-columns:1fr}.copernicus-item-filters label:first-child{grid-column:auto}.copernicus-item-filters .button{grid-column:auto}}
+
+/* NASA Earthdata CMR live discovery */
+.nasa-cmr-panel{margin-bottom:22px}
+.nasa-cmr-result-card{background:#fff}
+.nasa-cmr-result-card dl{grid-template-columns:82px minmax(0,1fr)}
+.nasa-cmr-result-card dd{overflow-wrap:anywhere}
+.nasa-cmr-result-card>p{max-height:110px;overflow:auto}
+.nasa-cmr-links{display:flex;gap:14px;flex-wrap:wrap;margin-top:auto}
+.nasa-cmr-links .external-source-link{margin-top:0}
