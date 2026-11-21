@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from app.data.search_engine import (COPERNICUS_STAC_ROOT, CatalogProviderError, _COLLECTIONS_CACHE, _ITEMS_CACHE, engine_status,
-                                    normalize, search_catalog, search_copernicus_collections, search_copernicus_items)
+from app.data.search_engine import (COPERNICUS_STAC_ROOT, NASA_CMR_ROOT, CatalogProviderError, _COLLECTIONS_CACHE, _CMR_COLLECTIONS_CACHE, _ITEMS_CACHE, engine_status,
+                                    normalize, search_catalog, search_copernicus_collections, search_copernicus_items, search_nasa_cmr_collections)
 
 
 class CatalogSearchTests(unittest.TestCase):
@@ -27,6 +27,72 @@ class CatalogSearchTests(unittest.TestCase):
     def test_planned_item_is_not_promoted_to_available(self):
         matches = search_catalog(self.datasets, "NDVI")
         self.assertEqual(matches[0]["status"], "planned")
+
+    def test_nasa_cmr_uses_official_search_api(self):
+        self.assertEqual(NASA_CMR_ROOT, "https://cmr.earthdata.nasa.gov/search")
+
+    def test_nasa_cmr_collection_search_maps_live_metadata(self):
+        _CMR_COLLECTIONS_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "feed": {
+                "entry": [{
+                    "id": "C2723754851-GES_DISC",
+                    "title": "GPM IMERG Final monthly V07",
+                    "short_name": "GPM_3IMERGM",
+                    "entry_id": "GPM_3IMERGM_07",
+                    "version_id": "07",
+                    "data_center": "GES_DISC",
+                    "time_start": "1998-01-01T00:00:00Z",
+                    "time_end": "2025-09-30T23:59:59Z",
+                    "granule_count": "333",
+                    "cloud_hosted": True,
+                    "summary": "Monthly precipitation product.",
+                    "links": [
+                        {"rel": "http://esipfed.org/ns/fedsearch/1.1/metadata#", "href": "https://example.test/metadata"},
+                        {"rel": "http://esipfed.org/ns/fedsearch/1.1/data#", "href": "https://example.test/data"},
+                    ],
+                }]
+            }
+        }
+        with patch("app.data.search_engine.requests.get", return_value=response) as get:
+            result = search_nasa_cmr_collections("GPM IMERG", 5)
+
+        self.assertEqual(result["count"], 1)
+        item = result["results"][0]
+        self.assertEqual(item["concept_id"], "C2723754851-GES_DISC")
+        self.assertEqual(item["short_name"], "GPM_3IMERGM")
+        self.assertEqual(item["granule_count"], 333)
+        self.assertEqual(item["provider"], "GES_DISC")
+        self.assertEqual(item["metadata_url"], "https://example.test/metadata")
+        self.assertEqual(item["data_url"], "https://example.test/data")
+        self.assertEqual(result["retrieval"], "metadata_only")
+        self.assertEqual(get.call_args.kwargs["params"]["keyword"], "GPM IMERG")
+        _CMR_COLLECTIONS_CACHE.clear()
+
+    def test_nasa_cmr_collection_search_uses_cache(self):
+        _CMR_COLLECTIONS_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"feed": {"entry": []}}
+        with patch("app.data.search_engine.requests.get", return_value=response) as get:
+            first = search_nasa_cmr_collections("precipitation", 5)
+            second = search_nasa_cmr_collections("precipitation", 5)
+        self.assertEqual(first, second)
+        get.assert_called_once()
+        _CMR_COLLECTIONS_CACHE.clear()
+
+    def test_nasa_cmr_search_requires_two_characters(self):
+        with self.assertRaises(ValueError):
+            search_nasa_cmr_collections(" ", 5)
+
+    def test_nasa_cmr_provider_failure_is_explicit(self):
+        _CMR_COLLECTIONS_CACHE.clear()
+        with patch("app.data.search_engine.requests.get", side_effect=__import__("requests").Timeout):
+            with self.assertRaises(CatalogProviderError):
+                search_nasa_cmr_collections("MODIS", 5)
+        _CMR_COLLECTIONS_CACHE.clear()
 
     def test_copernicus_uses_current_official_stac_endpoint(self):
         self.assertEqual(COPERNICUS_STAC_ROOT, "https://stac.dataspace.copernicus.eu/v1")
