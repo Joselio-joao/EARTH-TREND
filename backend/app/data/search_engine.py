@@ -4,10 +4,13 @@ This first layer searches metadata, not remote raster/series data. It is deliber
 provider-neutral so direct NASA endpoints can be added beside Earth Engine without
 changing the analysis pipeline.
 """
+import json
 import re
 import threading
 import time
 import unicodedata
+from functools import lru_cache
+from pathlib import Path
 
 import requests
 
@@ -143,6 +146,128 @@ def search_copernicus_collections(query="", limit=10):
         if len(_COLLECTIONS_CACHE) > 64:
             oldest = min(_COLLECTIONS_CACHE, key=lambda key: _COLLECTIONS_CACHE[key][0])
             _COLLECTIONS_CACHE.pop(oldest, None)
+    return result
+
+
+
+_ITEMS_CACHE = {}
+_ITEMS_CACHE_LOCK = threading.Lock()
+_ITEMS_CACHE_TTL_SECONDS = 180
+_ANGOLA_OUTLINE_PATH = Path(__file__).resolve().parents[2] / "data" / "regions" / "angola-national-outline.geojson"
+
+
+@lru_cache(maxsize=1)
+def _angola_intersects_geometry():
+    """Load the dissolved national outline used by the offline map."""
+    try:
+        payload = json.loads(_ANGOLA_OUTLINE_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise CatalogProviderError("O contorno nacional de Angola não está disponível para filtrar produtos.") from exc
+
+    polygons = []
+    for feature in payload.get("features", []):
+        geometry = (feature or {}).get("geometry") or {}
+        if geometry.get("type") == "Polygon":
+            polygons.append(geometry.get("coordinates") or [])
+        elif geometry.get("type") == "MultiPolygon":
+            polygons.extend(geometry.get("coordinates") or [])
+
+    polygons = [polygon for polygon in polygons if polygon and polygon[0]]
+    if not polygons:
+        raise CatalogProviderError("A geometria nacional de Angola está vazia ou num formato inválido.")
+    return {"type": "MultiPolygon", "coordinates": polygons}
+
+
+def _item_summary(feature, collection_id):
+    properties = feature.get("properties") or {}
+    links = feature.get("links") or []
+    self_link = next((link.get("href") for link in links
+                      if isinstance(link, dict) and link.get("rel") == "self" and link.get("href")), None)
+    item_id = str(feature.get("id") or "")
+    item_url = self_link or f"{COPERNICUS_STAC_ROOT}/collections/{collection_id}/items/{item_id}"
+    cloud_cover = properties.get("eo:cloud_cover")
+    gsd = properties.get("gsd")
+    return {
+        "id": item_id,
+        "collection": str(feature.get("collection") or collection_id),
+        "datetime": properties.get("datetime") or properties.get("start_datetime"),
+        "platform": properties.get("platform"),
+        "instruments": [str(value) for value in (properties.get("instruments") or [])[:5]],
+        "cloud_cover": float(cloud_cover) if isinstance(cloud_cover, (int, float)) else None,
+        "gsd_m": float(gsd) if isinstance(gsd, (int, float)) else None,
+        "processing_level": properties.get("processing:level"),
+        "product_type": properties.get("product:type"),
+        "bbox": feature.get("bbox"),
+        "item_url": item_url,
+        "source": "Copernicus Data Space Ecosystem — STAC",
+        "catalog_status": "live_metadata",
+    }
+
+
+def search_copernicus_items(collection_id, start_date, end_date, limit=10):
+    """Search STAC products intersecting the dissolved national outline of Angola."""
+    clean_collection = str(collection_id or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", clean_collection):
+        raise ValueError("Indica um identificador de coleção STAC válido.")
+
+    try:
+        start = date.fromisoformat(str(start_date))
+        end = date.fromisoformat(str(end_date))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("As datas devem estar no formato AAAA-MM-DD.") from exc
+    if end < start:
+        raise ValueError("A data final não pode ser anterior à data inicial.")
+    if (end - start).days > 366:
+        raise ValueError("Cada pesquisa pode abranger no máximo 366 dias.")
+
+    safe_limit = max(1, min(int(limit), 20))
+    cache_key = (clean_collection.lower(), start.isoformat(), end.isoformat(), safe_limit)
+    now = time.monotonic()
+    with _ITEMS_CACHE_LOCK:
+        cached = _ITEMS_CACHE.get(cache_key)
+        if cached and now - cached[0] < _ITEMS_CACHE_TTL_SECONDS:
+            return cached[1]
+
+    body = {
+        "collections": [clean_collection],
+        "intersects": _angola_intersects_geometry(),
+        "datetime": f"{start.isoformat()}T00:00:00Z/{end.isoformat()}T23:59:59Z",
+        "limit": safe_limit,
+    }
+    try:
+        response = requests.post(
+            f"{COPERNICUS_STAC_ROOT}/search",
+            json=body,
+            headers={"Accept": "application/geo+json", "Content-Type": "application/json"},
+            timeout=(3.05, 20),
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        raise CatalogProviderError("A pesquisa de produtos Copernicus não respondeu correctamente. Verifica a coleção e tenta novamente.") from exc
+
+    features = payload.get("features") if isinstance(payload, dict) else None
+    if not isinstance(features, list):
+        raise CatalogProviderError("O Copernicus devolveu resultados num formato STAC inesperado.")
+
+    items = [_item_summary(item, clean_collection) for item in features if isinstance(item, dict) and item.get("id")]
+    result = {
+        "collection": clean_collection,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "count": len(items),
+        "items": items,
+        "has_more": any(isinstance(link, dict) and link.get("rel") == "next" for link in (payload.get("links") or [])),
+        "source": "Copernicus Data Space Ecosystem STAC API",
+        "spatial_scope": "Intersecção com o contorno nacional dissolvido de Angola, baseado na camada geoBoundaries ADM1 de 2021; não contém fronteiras provinciais actuais.",
+        "retrieval": "metadata_only",
+        "notice": "Estes são registos de produtos que intersectam o contorno nacional de referência. As bandas e ficheiros não foram descarregados nem analisados; o acesso aos assets depende das condições do Copernicus.",
+    }
+    with _ITEMS_CACHE_LOCK:
+        _ITEMS_CACHE[cache_key] = (now, result)
+        if len(_ITEMS_CACHE) > 64:
+            oldest = min(_ITEMS_CACHE, key=lambda key: _ITEMS_CACHE[key][0])
+            _ITEMS_CACHE.pop(oldest, None)
     return result
 
 
