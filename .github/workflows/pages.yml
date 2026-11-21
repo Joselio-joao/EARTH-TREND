@@ -40,6 +40,10 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: frontend/dist
+      # The artifact listing API can briefly lag behind a successful upload.
+      # A short pause prevents deploy-pages from seeing zero artifacts.
+      - name: Wait for Pages artifact indexing
+        run: sleep 15
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5.0.1
