@@ -37,3 +37,13 @@ python3 -m http.server 4173
 Link público do site: **https://joselio-joao.github.io/EARTH-TREND/**
 
 Para ativar a publicação no GitHub: abre **Settings → Pages**, escolhe **Deploy from a branch**, seleciona a branch `main` e a pasta `/ (root)`, e clica em **Save**.
+
+## Mapa-base de Angola
+
+A interface inclui `frontend/public/data/angola-national-outline.geojson`, um contorno nacional simplificado que é carregado localmente no frontend e não depende da API.
+
+A geometria foi derivada da camada geoBoundaries AGO ADM1 (ano representativo 2021) já presente em `backend/data/regions/angola.geojson`. As fronteiras provinciais internas foram dissolvidas: esta camada mostra apenas o contorno nacional de Angola continental e Cabinda.
+
+**Limitação importante:** a camada de origem contém 18 unidades administrativas e não representa a divisão político-administrativa atual de 21 províncias estabelecida pela Lei n.º 14/24, de 5 de Setembro de 2024. Por isso, o mapa offline não apresenta limites provinciais atuais. A aplicação só deverá disponibilizar análise provincial para a nova divisão depois de integrar uma fonte geográfica atualizada, com proveniência e licença verificadas.
+
+A atribuição, a proveniência e as limitações desta camada estão documentadas em `frontend/public/data/ANGOLA-NATIONAL-OUTLINE-SOURCE.md`.
