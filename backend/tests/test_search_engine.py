@@ -1,6 +1,8 @@
 import unittest
+from unittest.mock import Mock, patch
 
-from app.data.search_engine import search_catalog, engine_status, normalize
+from app.data.search_engine import (CatalogProviderError, _COLLECTIONS_CACHE, engine_status,
+                                    normalize, search_catalog, search_copernicus_collections)
 
 
 class CatalogSearchTests(unittest.TestCase):
@@ -25,6 +27,56 @@ class CatalogSearchTests(unittest.TestCase):
     def test_planned_item_is_not_promoted_to_available(self):
         matches = search_catalog(self.datasets, "NDVI")
         self.assertEqual(matches[0]["status"], "planned")
+
+    def test_copernicus_collection_search_returns_live_metadata(self):
+        _COLLECTIONS_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "collections": [{
+                "id": "sentinel-2-l2a",
+                "title": "Sentinel-2 Level-2A",
+                "description": "Optical imagery.",
+                "license": "other",
+                "updated": "2026-11-20T00:00:00Z",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2015-06-23T00:00:00Z", None]]},
+                },
+                "keywords": ["Sentinel", "optical"],
+                "providers": [{"name": "ESA"}],
+                "assets": {"thumbnail": {"href": "https://example.test/thumb.jpg"}},
+            }]
+        }
+        with patch("app.data.search_engine.requests.get", return_value=response) as get:
+            result = search_copernicus_collections("Sentinel-2", 5)
+
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(result["results"][0]["id"], "sentinel-2-l2a")
+        self.assertEqual(result["results"][0]["providers"], ["ESA"])
+        self.assertEqual(result["results"][0]["catalog_status"], "live_metadata")
+        self.assertEqual(result["retrieval"], "metadata_only")
+        self.assertEqual(get.call_args.kwargs["params"]["q"], "Sentinel-2")
+        _COLLECTIONS_CACHE.clear()
+
+    def test_copernicus_search_uses_cache(self):
+        _COLLECTIONS_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"collections": []}
+        with patch("app.data.search_engine.requests.get", return_value=response) as get:
+            first = search_copernicus_collections("vegetation", 5)
+            second = search_copernicus_collections("vegetation", 5)
+        self.assertEqual(first, second)
+        get.assert_called_once()
+        _COLLECTIONS_CACHE.clear()
+
+    def test_copernicus_provider_failure_is_explicit(self):
+        _COLLECTIONS_CACHE.clear()
+        with patch("app.data.search_engine.requests.get", side_effect=__import__("requests").Timeout):
+            with self.assertRaises(CatalogProviderError):
+                search_copernicus_collections("Sentinel", 5)
+        _COLLECTIONS_CACHE.clear()
 
     def test_provider_status_discloses_phase(self):
         status = engine_status()
