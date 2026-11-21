@@ -33,6 +33,35 @@ export type ApiCatalog = {
   provinces: ProvinceRecord[];
 };
 
+export type NasaCmrCollection = {
+  concept_id: string;
+  title: string;
+  short_name: string;
+  entry_id?: string | null;
+  version?: string | null;
+  provider: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  granule_count?: number | null;
+  cloud_hosted?: boolean | null;
+  summary: string;
+  metadata_url: string;
+  data_url?: string | null;
+  browse_url?: string | null;
+  source: string;
+  catalog_status: string;
+};
+
+export type NasaCmrCollectionsResponse = {
+  query: string;
+  count: number;
+  results: NasaCmrCollection[];
+  source: string;
+  catalogue_url: string;
+  retrieval: 'metadata_only';
+  notice: string;
+};
+
 export type CopernicusCollection = {
   id: string;
   title: string;
@@ -164,6 +193,11 @@ export async function runAnalysis(payload: {
 export async function searchCatalog(query: string): Promise<{query:string;count:number;results:DatasetRecord[];engine:any}> {
   const params = new URLSearchParams({q:query,limit:'30'});
   return request<{query:string;count:number;results:DatasetRecord[];engine:any}>(`/search/catalog?${params.toString()}`);
+}
+
+export async function searchNasaCmrCollections(query: string, limit = 10): Promise<NasaCmrCollectionsResponse> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return request<NasaCmrCollectionsResponse>(`/search/nasa/cmr/collections?${params.toString()}`);
 }
 
 export async function searchCopernicusCollections(query: string, limit = 10): Promise<CopernicusCollectionsResponse> {
