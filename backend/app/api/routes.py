@@ -63,7 +63,8 @@ def region_geojson(region_id: str, request: Request):
     import json
     with open(path, encoding="utf-8") as fh:
         geometry = json.load(fh)
-    return geometry
+    return Response(content=json.dumps(geometry, ensure_ascii=False), media_type="application/geo+json",
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/maps/preview", tags=["mapas"], summary="Raster temporal real do Google Earth Engine")
