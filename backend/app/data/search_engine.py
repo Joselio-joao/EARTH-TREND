@@ -37,7 +37,7 @@ def search_catalog(datasets, query, limit=20):
             "id", "name", "family", "variable_id", "variable_label", "provider",
             "product_short_name", "coverage_note", "note", "product_url", "doi"
         )))
-        if not terms or not all(term in haystack for term in terms):
+        if terms and not all(term in haystack for term in terms):
             continue
         score = sum(3 if term in normalize(dataset.get("variable_label", "")) else
                     2 if term in normalize(dataset.get("name", "")) else 1 for term in terms)
