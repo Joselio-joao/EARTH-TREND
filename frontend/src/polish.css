@@ -143,9 +143,9 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 .copernicus-item-search{margin-top:22px;padding-top:18px;border-top:1px solid #e2eae4}
 .copernicus-item-heading{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .copernicus-item-heading h3{margin:5px 0 0;font-size:18px;letter-spacing:-.025em;color:#1b3024}
-.copernicus-item-filters{display:grid;grid-template-columns:minmax(160px,1.5fr) repeat(2,minmax(130px,1fr)) auto;gap:10px;align-items:end;margin:14px 0}
+.copernicus-item-filters{display:grid;grid-template-columns:minmax(155px,1.3fr) repeat(3,minmax(112px,1fr)) auto;gap:10px;align-items:end;margin:14px 0}
 .copernicus-item-filters label{display:grid;gap:6px;color:#64766a;font-size:10px;font-weight:700}
-.copernicus-item-filters input{width:100%;min-width:0;min-height:42px;padding:0 11px;border:1px solid #d8e3dc;border-radius:10px;background:#fff;color:#1d3024;font-size:11px}
+.copernicus-item-filters input,.copernicus-item-filters select{width:100%;min-width:0;min-height:42px;padding:0 11px;border:1px solid #d8e3dc;border-radius:10px;background:#fff;color:#1d3024;font-size:11px}
 .copernicus-item-filters input:focus{outline:3px solid rgba(82,163,117,.2);border-color:#8cb99b}
 .copernicus-items-results{margin-top:12px}
 .copernicus-item-card h3{font-size:14px;overflow-wrap:anywhere}
