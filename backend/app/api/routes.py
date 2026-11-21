@@ -44,8 +44,8 @@ def search_status():
 def search_catalog_endpoint(request: Request, q: str = Query("", max_length=120), limit: int = Query(20, ge=1, le=50)):
     enforce_rate_limit(request, "catalog_search", limit=60, window_seconds=60)
     datasets = _svc(request).list_datasets()
-    return {"query": q, "count": len(search_catalog(datasets, q, limit)), "results": search_catalog(datasets, q, limit),
-            "engine": engine_status()}
+    matches = search_catalog(datasets, q, limit)
+    return {"query": q, "count": len(matches), "results": matches, "engine": engine_status()}
 
 
 @router.get("/regions", tags=["dados"], summary="Regiões disponíveis e o tipo de fronteira de cada uma")
