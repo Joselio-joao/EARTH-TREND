@@ -64,7 +64,7 @@ def search_catalog(datasets, query, limit=20):
              for d in [item["dataset"]]]
 
 
-COPERNICUS_STAC_ROOT = "https://stac.opensearch.dataspace.copernicus.eu/v1"
+COPERNICUS_STAC_ROOT = "https://stac.dataspace.copernicus.eu/v1"
 _COLLECTIONS_CACHE = {}
 _COLLECTIONS_CACHE_LOCK = threading.Lock()
 _COLLECTIONS_CACHE_TTL_SECONDS = 300
