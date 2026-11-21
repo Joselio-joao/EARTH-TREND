@@ -4,6 +4,7 @@ from fastapi.responses import Response
 
 from ..security import enforce_rate_limit
 from ..errors import ApiError
+from ..data.search_engine import search_catalog, engine_status
 
 from .schemas import AnalysisRequest
 
@@ -32,6 +33,19 @@ def ml_status(request: Request):
 @router.get("/datasets", tags=["dados"], summary="Datasets registados e se já têm dados no servidor")
 def datasets(request: Request):
     return {"datasets": _svc(request).list_datasets()}
+
+
+@router.get("/search/status", tags=["pesquisa"], summary="Estado do motor EarthTrend Search")
+def search_status():
+    return engine_status()
+
+
+@router.get("/search/catalog", tags=["pesquisa"], summary="Pesquisa local no catálogo de dados")
+def search_catalog_endpoint(request: Request, q: str = Query("", max_length=120), limit: int = Query(20, ge=1, le=50)):
+    enforce_rate_limit(request, "catalog_search", limit=60, window_seconds=60)
+    datasets = _svc(request).list_datasets()
+    return {"query": q, "count": len(search_catalog(datasets, q, limit)), "results": search_catalog(datasets, q, limit),
+            "engine": engine_status()}
 
 
 @router.get("/regions", tags=["dados"], summary="Regiões disponíveis e o tipo de fronteira de cada uma")
