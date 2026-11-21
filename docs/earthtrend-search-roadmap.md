@@ -1,6 +1,6 @@
 # EarthTrend Search — architecture and migration plan
 
-**Status:** phase 2 in progress (local metadata search + live Copernicus collection discovery)  
+**Status:** phase 3 in progress (local search + Copernicus collection and Angola item discovery)  
 **Current data engine:** Google Earth Engine remains the active provider for products configured in the backend.  
 **Goal:** build a source-neutral data discovery and ingestion layer, then add direct NASA providers in parallel.
 
@@ -16,7 +16,7 @@
 ## Provider status
 
 - Google Earth Engine: **active**; existing configured datasets.
-- Copernicus Data Space STAC: **active for live collection-metadata discovery**; product retrieval and analysis are not yet integrated.
+- Copernicus Data Space STAC: **active for live collection and Angola-intersecting item metadata discovery**; asset retrieval and raster analysis are not yet integrated.
 - NASA Earthdata CMR: **planned** discovery adapter; collection/granule search and links.
 - NASA GES DISC: **planned** direct product retrieval, including access checks and formats.
 - NASA LP DAAC: **planned** direct land-product retrieval.
@@ -69,9 +69,20 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 - Search ranks matching dataset metadata and exposes status, source, coverage, units, resolution and official link.
 - It does **not** search remote NASA collections or retrieve data yet.
 
+## Phase 3 implemented — Copernicus item discovery for Angola
+
+- Live item endpoint: `/search/copernicus/items?collection=sentinel-2-l2a&start=2026-10-01&end=2026-10-31&limit=10`.
+- Uses STAC Item Search with the dissolved national outline of Angola as a GeoJSON `intersects` geometry, rather than a broad rectangular bounding box.
+- Returns product ID, acquisition time, platform, sensor, declared cloud cover, nominal GSD, processing level, product type and official STAC item URL.
+- Maximum date span is 366 days, results are capped, requests are rate-limited and responses are briefly cached.
+- The UI appears under the Copernicus panel in the Data Library and allows collection ID/date range selection.
+- The spatial filter uses the same dissolved 2021 national outline as the offline map. It does not claim current provincial borders or legal/cadastral precision.
+- Results are metadata-only: assets/bands are not downloaded and no Copernicus raster is run through the trend engine.
+- Tests cover item mapping, spatial request, time-range validation and response-cache behavior.
+
 ## Next phases
 
-1. Add Copernicus item search constrained to Angola and a selected collection, keeping results metadata-only until access and file formats are validated.
+1. Add pagination and item-level quality filters (e.g. cloud cover), preserving the STAC query and source metadata.
 2. Add NASA CMR collection/granule discovery with product IDs and official links.
 3. Add one direct data adapter for a product with reliable public access and a testable sample file.
 4. Add provider selection in analysis settings and a provenance panel for every result.
