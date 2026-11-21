@@ -83,6 +83,7 @@ export type CopernicusItemsResponse = {
   count: number;
   items: CopernicusItem[];
   has_more: boolean;
+  max_cloud_cover?: number | null;
   source: string;
   spatial_scope: string;
   retrieval: 'metadata_only';
@@ -170,8 +171,9 @@ export async function searchCopernicusCollections(query: string, limit = 10): Pr
   return request<CopernicusCollectionsResponse>(`/search/copernicus/collections?${params.toString()}`);
 }
 
-export async function searchCopernicusItems(collection: string, start: string, end: string, limit = 10): Promise<CopernicusItemsResponse> {
+export async function searchCopernicusItems(collection: string, start: string, end: string, limit = 10, maxCloudCover?: number): Promise<CopernicusItemsResponse> {
   const params = new URLSearchParams({ collection, start, end, limit: String(limit) });
+  if (maxCloudCover !== undefined) params.set('max_cloud_cover', String(maxCloudCover));
   return request<CopernicusItemsResponse>(`/search/copernicus/items?${params.toString()}`);
 }
 
