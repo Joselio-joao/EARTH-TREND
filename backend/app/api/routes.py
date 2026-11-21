@@ -68,10 +68,11 @@ def copernicus_items_endpoint(
     start: str = Query(..., min_length=10, max_length=10),
     end: str = Query(..., min_length=10, max_length=10),
     limit: int = Query(10, ge=1, le=20),
+    max_cloud_cover: float | None = Query(None, ge=0, le=100),
 ):
     enforce_rate_limit(request, "copernicus_items", limit=12, window_seconds=60)
     try:
-        return search_copernicus_items(collection, start, end, limit)
+        return search_copernicus_items(collection, start, end, limit, max_cloud_cover)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except CatalogProviderError as exc:

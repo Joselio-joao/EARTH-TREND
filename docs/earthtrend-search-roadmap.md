@@ -75,6 +75,7 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 - Uses STAC Item Search with the dissolved national outline of Angola as a GeoJSON `intersects` geometry, rather than a broad rectangular bounding box.
 - Returns product ID, acquisition time, platform, sensor, declared cloud cover, nominal GSD, processing level, product type and official STAC item URL.
 - Maximum date span is 366 days, results are capped, requests are rate-limited and responses are briefly cached.
+- Optional maximum cloud-cover filter uses the CDSE STAC CQL2 JSON filter on `eo:cloud_cover` (0–100%).
 - The UI appears under the Copernicus panel in the Data Library and allows collection ID/date range selection.
 - The spatial filter uses the same dissolved 2021 national outline as the offline map. It does not claim current provincial borders or legal/cadastral precision.
 - Results are metadata-only: assets/bands are not downloaded and no Copernicus raster is run through the trend engine.
@@ -82,7 +83,7 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 
 ## Next phases
 
-1. Add pagination and item-level quality filters (e.g. cloud cover), preserving the STAC query and source metadata.
+1. Add pagination and additional item-level quality controls (e.g. instrument and processing-level filters), preserving the STAC query and source metadata.
 2. Add NASA CMR collection/granule discovery with product IDs and official links.
 3. Add one direct data adapter for a product with reliable public access and a testable sample file.
 4. Add provider selection in analysis settings and a provenance panel for every result.

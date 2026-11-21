@@ -104,7 +104,7 @@ class CatalogSearchTests(unittest.TestCase):
             "links": [],
         }
         with patch("app.data.search_engine.requests.post", return_value=response) as post:
-            result = search_copernicus_items("sentinel-2-l2a", "2026-10-01", "2026-10-31", 5)
+            result = search_copernicus_items("sentinel-2-l2a", "2026-10-01", "2026-10-31", 5, 20)
 
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["items"][0]["id"], "S2A_TEST_ITEM")
@@ -116,7 +116,15 @@ class CatalogSearchTests(unittest.TestCase):
         self.assertEqual(body["collections"], ["sentinel-2-l2a"])
         self.assertEqual(body["datetime"], "2026-10-01T00:00:00Z/2026-10-31T23:59:59Z")
         self.assertEqual(body["intersects"]["type"], "MultiPolygon")
+        self.assertEqual(body["filter"]["op"], "lte")
+        self.assertEqual(body["filter"]["args"], [{"property": "eo:cloud_cover"}, 20.0])
+        self.assertEqual(body["filter-lang"], "cql2-json")
+        self.assertEqual(result["max_cloud_cover"], 20.0)
         _ITEMS_CACHE.clear()
+
+    def test_copernicus_item_search_rejects_invalid_cloud_limit(self):
+        with self.assertRaises(ValueError):
+            search_copernicus_items("sentinel-2-l2a", "2026-10-01", "2026-10-31", 5, 101)
 
     def test_copernicus_item_search_rejects_invalid_date_range(self):
         with self.assertRaises(ValueError):
