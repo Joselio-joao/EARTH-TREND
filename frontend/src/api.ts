@@ -104,6 +104,10 @@ export async function runAnalysis(payload: {
   return request<any>('/analyze', { method: 'POST', body: JSON.stringify(payload) });
 }
 
+export async function loadRegionGeoJSON(regionId: string): Promise<any> {
+  return request<any>(`/regions/${encodeURIComponent(regionId)}/geojson`);
+}
+
 export function mapPreviewUrl(payload: {dataset_id:string;region_id:string;start:string;end:string}) {
   const query = new URLSearchParams({
     dataset_id: payload.dataset_id,
