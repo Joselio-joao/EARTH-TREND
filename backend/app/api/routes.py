@@ -1,10 +1,10 @@
 """Endpoints da API. Só traduzem HTTP para chamadas ao Service e de volta."""
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 
 from ..security import enforce_rate_limit
 from ..errors import ApiError
-from ..data.search_engine import search_catalog, engine_status
+from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, engine_status
 
 from .schemas import AnalysisRequest
 
@@ -46,6 +46,19 @@ def search_catalog_endpoint(request: Request, q: str = Query("", max_length=120)
     datasets = _svc(request).list_datasets()
     matches = search_catalog(datasets, q, limit)
     return {"query": q, "count": len(matches), "results": matches, "engine": engine_status()}
+
+
+@router.get("/search/copernicus/collections", tags=["pesquisa"], summary="Pesquisa ao vivo de coleções Copernicus STAC")
+def copernicus_collections_endpoint(
+    request: Request,
+    q: str = Query("", max_length=120),
+    limit: int = Query(10, ge=1, le=20),
+):
+    enforce_rate_limit(request, "copernicus_catalog", limit=20, window_seconds=60)
+    try:
+        return search_copernicus_collections(q, limit)
+    except CatalogProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/regions", tags=["dados"], summary="Regiões disponíveis e o tipo de fronteira de cada uma")
