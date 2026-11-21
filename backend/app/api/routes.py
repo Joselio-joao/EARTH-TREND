@@ -53,6 +53,19 @@ def regions(request: Request):
     return {"regions": _svc(request).list_regions()}
 
 
+@router.get("/regions/{region_id}/geojson", tags=["mapas"], summary="Geometria local para mapa-base")
+def region_geojson(region_id: str, request: Request):
+    registry = _svc(request).registry
+    entry = registry._entry(region_id)
+    path = registry._boundary_path(entry["id"])
+    if not path.is_file():
+        raise ApiError(404, "boundary_not_found", "A geometria desta região não está disponível localmente.")
+    import json
+    with open(path, encoding="utf-8") as fh:
+        geometry = json.load(fh)
+    return geometry
+
+
 @router.get("/maps/preview", tags=["mapas"], summary="Raster temporal real do Google Earth Engine")
 def map_preview(request: Request,
                 dataset_id: str = Query(..., min_length=1, max_length=64),
