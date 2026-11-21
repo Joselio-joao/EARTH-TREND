@@ -23,7 +23,7 @@ def normalize(value):
 
 PROVIDERS = [
     {"id": "copernicus_stac", "name": "Copernicus Data Space STAC", "kind": "live_catalog_discovery", "status": "active",
-     "role": "Live search of collection metadata; direct product download and analysis are separate integrations."},
+     "role": "Live search of collection and Angola-intersecting item metadata; product download and raster analysis are separate integrations."},
     {"id": "earth_engine", "name": "Google Earth Engine", "kind": "catalog_and_data", "status": "active",
      "role": "Current provider for configured analysis and raster preview products."},
     {"id": "nasa_earthdata", "name": "NASA Earthdata / CMR", "kind": "catalog_discovery", "status": "planned",
@@ -274,5 +274,5 @@ def search_copernicus_items(collection_id, start_date, end_date, limit=10):
 
 def engine_status():
     return {"name": "EarthTrend Search", "phase": "catalog_search",
-            "message": "Pesquisa o catálogo interno e consulta ao vivo metadados de coleções Copernicus; a descarga e análise de produtos externos ainda são integrações separadas.",
+            "message": "Pesquisa o catálogo interno, coleções Copernicus e registos de produtos que intersectam Angola; a descarga e análise raster de produtos externos ainda são integrações separadas.",
             "providers": PROVIDERS}
