@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from app.data.search_engine import (CatalogProviderError, _COLLECTIONS_CACHE, _ITEMS_CACHE, engine_status,
+from app.data.search_engine import (COPERNICUS_STAC_ROOT, CatalogProviderError, _COLLECTIONS_CACHE, _ITEMS_CACHE, engine_status,
                                     normalize, search_catalog, search_copernicus_collections, search_copernicus_items)
 
 
@@ -27,6 +27,9 @@ class CatalogSearchTests(unittest.TestCase):
     def test_planned_item_is_not_promoted_to_available(self):
         matches = search_catalog(self.datasets, "NDVI")
         self.assertEqual(matches[0]["status"], "planned")
+
+    def test_copernicus_uses_current_official_stac_endpoint(self):
+        self.assertEqual(COPERNICUS_STAC_ROOT, "https://stac.dataspace.copernicus.eu/v1")
 
     def test_copernicus_collection_search_returns_live_metadata(self):
         _COLLECTIONS_CACHE.clear()
