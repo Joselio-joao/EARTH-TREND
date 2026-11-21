@@ -33,6 +33,33 @@ export type ApiCatalog = {
   provinces: ProvinceRecord[];
 };
 
+export type CopernicusCollection = {
+  id: string;
+  title: string;
+  description: string;
+  license: string;
+  updated?: string | null;
+  temporal_start?: string | null;
+  temporal_end?: string | null;
+  bbox?: number[] | null;
+  keywords: string[];
+  providers: string[];
+  thumbnail_url?: string | null;
+  collection_url: string;
+  source: string;
+  catalog_status: string;
+};
+
+export type CopernicusCollectionsResponse = {
+  query: string;
+  count: number;
+  results: CopernicusCollection[];
+  source: string;
+  catalogue_url: string;
+  retrieval: 'metadata_only';
+  notice: string;
+};
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://earthtrend-ai-api.onrender.com').replace(/\/$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -107,6 +134,11 @@ export async function runAnalysis(payload: {
 export async function searchCatalog(query: string): Promise<{query:string;count:number;results:DatasetRecord[];engine:any}> {
   const params = new URLSearchParams({q:query,limit:'30'});
   return request<{query:string;count:number;results:DatasetRecord[];engine:any}>(`/search/catalog?${params.toString()}`);
+}
+
+export async function searchCopernicusCollections(query: string, limit = 10): Promise<CopernicusCollectionsResponse> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return request<CopernicusCollectionsResponse>(`/search/copernicus/collections?${params.toString()}`);
 }
 
 export async function loadRegionGeoJSON(regionId: string): Promise<any> {
