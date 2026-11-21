@@ -4,6 +4,7 @@ from fastapi.responses import Response
 
 from ..security import enforce_rate_limit
 from ..errors import ApiError
+from ..data.search_engine import search_catalog, engine_status
 
 from .schemas import AnalysisRequest
 
@@ -34,9 +35,36 @@ def datasets(request: Request):
     return {"datasets": _svc(request).list_datasets()}
 
 
+@router.get("/search/status", tags=["pesquisa"], summary="Estado do motor EarthTrend Search")
+def search_status():
+    return engine_status()
+
+
+@router.get("/search/catalog", tags=["pesquisa"], summary="Pesquisa local no catálogo de dados")
+def search_catalog_endpoint(request: Request, q: str = Query("", max_length=120), limit: int = Query(20, ge=1, le=50)):
+    enforce_rate_limit(request, "catalog_search", limit=60, window_seconds=60)
+    datasets = _svc(request).list_datasets()
+    matches = search_catalog(datasets, q, limit)
+    return {"query": q, "count": len(matches), "results": matches, "engine": engine_status()}
+
+
 @router.get("/regions", tags=["dados"], summary="Regiões disponíveis e o tipo de fronteira de cada uma")
 def regions(request: Request):
     return {"regions": _svc(request).list_regions()}
+
+
+@router.get("/regions/{region_id}/geojson", tags=["mapas"], summary="Geometria local para mapa-base")
+def region_geojson(region_id: str, request: Request):
+    registry = _svc(request).registry
+    entry = registry._entry(region_id)
+    path = registry._boundary_path(entry["id"])
+    if not path.is_file():
+        raise ApiError(404, "boundary_not_found", "A geometria desta região não está disponível localmente.")
+    import json
+    with open(path, encoding="utf-8") as fh:
+        geometry = json.load(fh)
+    return Response(content=json.dumps(geometry, ensure_ascii=False), media_type="application/geo+json",
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/maps/preview", tags=["mapas"], summary="Raster temporal real do Google Earth Engine")
