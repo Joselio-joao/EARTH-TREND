@@ -93,6 +93,8 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 .angola-map-shell{position:relative;min-height:260px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#eef2eb,#e3ebe4);border:1px solid #d6e0d7;border-radius:14px;padding:18px}
 .geo-layer{width:100%;height:100%;max-height:290px;display:block}
 .geo-shape{fill:#c7d8cc;stroke:#7b9784;stroke-width:.42;stroke-linejoin:round}
+.geo-national-shape{fill:#c7d8cc;stroke:#617e6d;stroke-width:.7;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.geo-national-overlay{fill:none;stroke:#f7fff9;stroke-width:1;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .geo-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:.95}
 .geo-outline{fill:none;stroke:#f7fff9;stroke-width:.65;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .map-base-label{position:absolute;left:14px;bottom:12px;font-size:10px;letter-spacing:.13em;font-weight:700;color:#506a58;background:#ffffffc9;padding:5px 8px;border-radius:5px}
