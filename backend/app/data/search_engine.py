@@ -26,8 +26,8 @@ PROVIDERS = [
      "role": "Live search of collection and Angola-intersecting item metadata; product download and raster analysis are separate integrations."},
     {"id": "earth_engine", "name": "Google Earth Engine", "kind": "catalog_and_data", "status": "active",
      "role": "Current provider for configured analysis and raster preview products."},
-    {"id": "nasa_earthdata", "name": "NASA Earthdata / CMR", "kind": "catalog_discovery", "status": "planned",
-     "role": "Independent discovery of NASA collections and granules; access/authentication varies by product."},
+    {"id": "nasa_earthdata", "name": "NASA Earthdata / CMR", "kind": "live_catalog_discovery", "status": "active",
+     "role": "Live discovery of NASA collection metadata through CMR; granule retrieval and data access remain product-specific."},
     {"id": "ges_disc", "name": "NASA GES DISC", "kind": "data_provider", "status": "planned",
      "role": "Direct access paths for hydrology and atmospheric products, subject to product access rules."},
     {"id": "lp_daac", "name": "NASA LP DAAC", "kind": "data_provider", "status": "planned",
@@ -287,7 +287,105 @@ def search_copernicus_items(collection_id, start_date, end_date, limit=10, max_c
     return result
 
 
+
+NASA_CMR_ROOT = "https://cmr.earthdata.nasa.gov/search"
+_CMR_COLLECTIONS_CACHE = {}
+_CMR_COLLECTIONS_CACHE_LOCK = threading.Lock()
+_CMR_COLLECTIONS_CACHE_TTL_SECONDS = 300
+
+
+def _cmr_collection_summary(entry):
+    links = entry.get("links") or []
+
+    def find_link(fragment):
+        return next((link.get("href") for link in links
+                     if isinstance(link, dict) and fragment in str(link.get("rel") or "")), None)
+
+    concept_id = str(entry.get("id") or "")
+    short_name = str(entry.get("short_name") or "")
+    version = str(entry.get("version_id") or "")
+    granule_count = entry.get("granule_count")
+    try:
+        granule_count = int(granule_count) if granule_count is not None else None
+    except (TypeError, ValueError):
+        granule_count = None
+
+    return {
+        "concept_id": concept_id,
+        "title": str(entry.get("title") or entry.get("dataset_id") or short_name or "Colecção NASA sem título"),
+        "short_name": short_name,
+        "entry_id": entry.get("entry_id"),
+        "version": version,
+        "provider": str(entry.get("data_center") or "NASA Earthdata"),
+        "start_date": entry.get("time_start"),
+        "end_date": entry.get("time_end"),
+        "granule_count": granule_count,
+        "cloud_hosted": entry.get("cloud_hosted"),
+        "summary": str(entry.get("summary") or "")[:800],
+        "metadata_url": find_link("metadata#") or f"{NASA_CMR_ROOT}/concepts/{concept_id}",
+        "data_url": find_link("data#"),
+        "browse_url": find_link("browse#"),
+        "source": "NASA Earthdata Common Metadata Repository (CMR)",
+        "catalog_status": "live_metadata",
+    }
+
+
+def search_nasa_cmr_collections(query, limit=10):
+    """Search live NASA CMR collections; metadata discovery only."""
+    clean_query = str(query or "").strip()[:120]
+    if len(clean_query) < 2:
+        raise ValueError("Escreve pelo menos dois caracteres para pesquisar colecções NASA.")
+
+    safe_limit = max(1, min(int(limit), 20))
+    cache_key = (normalize(clean_query), safe_limit)
+    now = time.monotonic()
+    with _CMR_COLLECTIONS_CACHE_LOCK:
+        cached = _CMR_COLLECTIONS_CACHE.get(cache_key)
+        if cached and now - cached[0] < _CMR_COLLECTIONS_CACHE_TTL_SECONDS:
+            return cached[1]
+
+    params = {
+        "keyword": clean_query,
+        "page_size": safe_limit,
+        "include_has_granules": "true",
+        "include_granule_counts": "true",
+    }
+    try:
+        response = requests.get(
+            f"{NASA_CMR_ROOT}/collections.json",
+            params=params,
+            headers={"Accept": "application/json", "Client-Id": "EarthTrend-AI"},
+            timeout=(3.05, 15),
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        raise CatalogProviderError("O catálogo NASA Earthdata CMR não respondeu correctamente. Tenta novamente mais tarde.") from exc
+
+    feed = payload.get("feed") if isinstance(payload, dict) else None
+    entries = feed.get("entry") if isinstance(feed, dict) else None
+    if not isinstance(entries, list):
+        raise CatalogProviderError("O NASA CMR devolveu uma resposta num formato inesperado.")
+
+    results = [_cmr_collection_summary(entry) for entry in entries if isinstance(entry, dict) and entry.get("id")]
+    result = {
+        "query": clean_query,
+        "count": len(results),
+        "results": results,
+        "source": "NASA Earthdata Common Metadata Repository",
+        "catalogue_url": f"{NASA_CMR_ROOT}/collections.json",
+        "retrieval": "metadata_only",
+        "notice": "Esta pesquisa encontra metadados de colecções NASA. A disponibilidade de granulações, o acesso aos ficheiros e a necessidade de Earthdata Login dependem de cada produto.",
+    }
+    with _CMR_COLLECTIONS_CACHE_LOCK:
+        _CMR_COLLECTIONS_CACHE[cache_key] = (now, result)
+        if len(_CMR_COLLECTIONS_CACHE) > 64:
+            oldest = min(_CMR_COLLECTIONS_CACHE, key=lambda key: _CMR_COLLECTIONS_CACHE[key][0])
+            _CMR_COLLECTIONS_CACHE.pop(oldest, None)
+    return result
+
+
 def engine_status():
     return {"name": "EarthTrend Search", "phase": "catalog_search",
-            "message": "Pesquisa o catálogo interno, coleções Copernicus e registos de produtos que intersectam Angola; a descarga e análise raster de produtos externos ainda são integrações separadas.",
+            "message": "Pesquisa o catálogo interno, colecções NASA CMR, colecções Copernicus e registos de produtos que intersectam Angola; a descarga e análise raster de produtos externos ainda são integrações separadas.",
             "providers": PROVIDERS}
