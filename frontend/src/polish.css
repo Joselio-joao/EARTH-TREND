@@ -88,3 +88,15 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:760px){.analysis-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.analysis-stage{padding:10px 8px}.analysis-loading-top{align-items:flex-start}.analysis-clock strong{font-size:18px}}
 @media(max-width:390px){.analysis-loading{padding:14px}.analysis-spinner{width:38px;height:38px}.analysis-loading-head b{font-size:12px}.analysis-stage b{font-size:8px}.analysis-stage small{font-size:7px}}
 @media(prefers-reduced-motion:reduce){.analysis-spinner svg,.analysis-progress-track i,.analysis-stage.active>i{animation:none!important}}
+
+/* Angola vector base-map and map overlay */
+.angola-map-shell{position:relative;min-height:260px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#eef2eb,#e3ebe4);border:1px solid #d6e0d7;border-radius:14px;padding:18px}
+.geo-layer{width:100%;height:100%;max-height:290px;display:block}
+.geo-shape{fill:#c7d8cc;stroke:#7b9784;stroke-width:.42;stroke-linejoin:round}
+.geo-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:.95}
+.geo-outline{fill:none;stroke:#f7fff9;stroke-width:.65;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.map-base-label{position:absolute;left:14px;bottom:12px;font-size:10px;letter-spacing:.13em;font-weight:700;color:#506a58;background:#ffffffc9;padding:5px 8px;border-radius:5px}
+.angola-map-empty{width:100%;height:260px;display:grid;place-items:center;font-size:12px;color:#6d7c73;text-align:center}
+.extra-stats{margin-bottom:12px}
+.raster-image-frame{position:relative}
+@media(max-width:700px){.angola-map-shell{min-height:220px}.geo-layer{max-height:240px}}
