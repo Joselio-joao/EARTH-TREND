@@ -13,9 +13,17 @@ A aplicação conduz o utilizador por um fluxo de investigação ambiental:
 
 ## Estado atual
 
-O front-end é estático e responsivo, com estado persistente em `localStorage`. Os resultados apresentados no Trend Lab são **amostras demonstrativas** para validar a experiência; não representam medições reais nem resultados oficiais da NASA.
+O repositório contém uma interface React/Vite responsiva e um backend FastAPI publicado separadamente.
 
-A interface já está preparada para a futura arquitetura prevista no documento: React/Frontend → FastAPI → dados processados NASA → motor estatístico Python. A próxima integração deverá substituir os valores de `assets/app.js` por respostas do backend, mantendo a proveniência, unidades, método, incerteza e limitações no relatório.
+- **Interface pública:** https://joselio-joao.github.io/EARTH-TREND/
+- **API:** https://earthtrend-ai-api.onrender.com
+- **Análise configurada:** Google Earth Engine continua a ser o fornecedor activo para os produtos ligados ao pipeline actual.
+- **Estatísticas de tendência:** o resumo inclui medidas descritivas complementares, variação absoluta e percentual, dispersão e amplitude, sem confundir descrição com significância estatística.
+- **Mapa de Angola:** o contorno nacional é servido como GeoJSON local no frontend, pelo que permanece visível sem backend. Esta camada nacional não contém divisões provinciais.
+- **EarthTrend Search:** pesquisa o catálogo local e consulta ao vivo metadados de coleções do Copernicus STAC. A descoberta de metadados não significa que os ficheiros externos já sejam descarregados ou analisados.
+- **Catálogo multi-fonte:** inclui NASA, Copernicus, NOAA, USGS, ESA e outras plataformas como fontes de pesquisa, com o estado de integração identificado.
+
+As séries e mapas de análise devem ser interpretados com a fonte, versão, cobertura temporal, unidade, qualidade e limitações apresentadas no resultado. Os dados externos ainda não integrados não são apresentados como disponíveis para análise.
 
 ## Páginas
 
