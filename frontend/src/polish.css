@@ -100,3 +100,14 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 .extra-stats{margin-bottom:12px}
 .raster-image-frame{position:relative}
 @media(max-width:700px){.angola-map-shell{min-height:220px}.geo-layer{max-height:240px}}
+
+/* Search catalogue */
+.catalog-search-panel{margin-bottom:18px}
+.catalog-search{display:flex;gap:10px;margin:14px 0;align-items:center}
+.catalog-search input{flex:1;min-width:0}
+.catalog-search-results{border-top:1px solid #e2e8e2;padding-top:12px;margin-top:10px}
+.catalog-search-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #edf0ed}
+.catalog-search-item>div{display:grid;gap:3px;min-width:0}
+.catalog-search-item strong{font-size:13px}
+.catalog-search-item span{font-size:11px;color:#6b7a71}
+@media(max-width:560px){.catalog-search{flex-direction:column;align-items:stretch}.catalog-search .button{width:100%;justify-content:center}.catalog-search-item{align-items:flex-start;flex-direction:column}}
