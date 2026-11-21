@@ -55,3 +55,8 @@ A geometria foi derivada da camada geoBoundaries AGO ADM1 (ano representativo 20
 **Limitação importante:** a camada de origem contém 18 unidades administrativas e não representa a divisão político-administrativa atual de 21 províncias estabelecida pela Lei n.º 14/24, de 5 de Setembro de 2024. Por isso, o mapa offline não apresenta limites provinciais atuais. A aplicação só deverá disponibilizar análise provincial para a nova divisão depois de integrar uma fonte geográfica atualizada, com proveniência e licença verificadas.
 
 A atribuição, a proveniência e as limitações desta camada estão documentadas em `frontend/public/data/ANGOLA-NATIONAL-OUTLINE-SOURCE.md`. O mesmo contorno nacional é utilizado como geometria `intersects` na pesquisa de produtos Copernicus, sem afirmar precisão cadastral ou limites provinciais actuais.
+
+
+### Pesquisa NASA Earthdata CMR (ao vivo)
+
+A Biblioteca de Dados consulta o catálogo CMR para procurar coleções e granules por short name, período e caixa geográfica aproximada de Angola. Inclui um filtro opcional de cobertura de nuvens e links para metadados, previews e ficheiros quando fornecidos pelo catálogo. A pesquisa devolve metadados; não descarrega nem analisa os produtos. A caixa geográfica é aproximada e pode incluir áreas vizinhas. Alguns ficheiros exigem Earthdata Login.
