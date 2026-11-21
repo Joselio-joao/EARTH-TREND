@@ -4,7 +4,7 @@ from fastapi.responses import Response
 
 from ..security import enforce_rate_limit
 from ..errors import ApiError
-from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, engine_status
+from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, search_copernicus_items, engine_status
 
 from .schemas import AnalysisRequest
 
@@ -57,6 +57,23 @@ def copernicus_collections_endpoint(
     enforce_rate_limit(request, "copernicus_catalog", limit=20, window_seconds=60)
     try:
         return search_copernicus_collections(q, limit)
+    except CatalogProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/search/copernicus/items", tags=["pesquisa"], summary="Pesquisa produtos Copernicus que intersectam Angola")
+def copernicus_items_endpoint(
+    request: Request,
+    collection: str = Query("sentinel-2-l2a", min_length=1, max_length=120),
+    start: str = Query(..., min_length=10, max_length=10),
+    end: str = Query(..., min_length=10, max_length=10),
+    limit: int = Query(10, ge=1, le=20),
+):
+    enforce_rate_limit(request, "copernicus_items", limit=12, window_seconds=60)
+    try:
+        return search_copernicus_items(collection, start, end, limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except CatalogProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
