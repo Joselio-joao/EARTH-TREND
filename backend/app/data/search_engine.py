@@ -205,7 +205,7 @@ def _item_summary(feature, collection_id):
     }
 
 
-def search_copernicus_items(collection_id, start_date, end_date, limit=10):
+def search_copernicus_items(collection_id, start_date, end_date, limit=10, max_cloud_cover=None):
     """Search STAC products intersecting the dissolved national outline of Angola."""
     clean_collection = str(collection_id or "").strip()
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", clean_collection):
@@ -221,8 +221,16 @@ def search_copernicus_items(collection_id, start_date, end_date, limit=10):
     if (end - start).days > 366:
         raise ValueError("Cada pesquisa pode abranger no máximo 366 dias.")
 
+    if max_cloud_cover is not None:
+        try:
+            max_cloud_cover = float(max_cloud_cover)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("A cobertura máxima de nuvens deve ser um número entre 0 e 100.") from exc
+        if not 0 <= max_cloud_cover <= 100:
+            raise ValueError("A cobertura máxima de nuvens deve estar entre 0 e 100.")
+
     safe_limit = max(1, min(int(limit), 20))
-    cache_key = (clean_collection.lower(), start.isoformat(), end.isoformat(), safe_limit)
+    cache_key = (clean_collection.lower(), start.isoformat(), end.isoformat(), safe_limit, max_cloud_cover)
     now = time.monotonic()
     with _ITEMS_CACHE_LOCK:
         cached = _ITEMS_CACHE.get(cache_key)
@@ -235,6 +243,12 @@ def search_copernicus_items(collection_id, start_date, end_date, limit=10):
         "datetime": f"{start.isoformat()}T00:00:00Z/{end.isoformat()}T23:59:59Z",
         "limit": safe_limit,
     }
+    if max_cloud_cover is not None:
+        body["filter"] = {
+            "op": "lte",
+            "args": [{"property": "eo:cloud_cover"}, max_cloud_cover],
+        }
+        body["filter-lang"] = "cql2-json"
     try:
         response = requests.post(
             f"{COPERNICUS_STAC_ROOT}/search",
@@ -256,6 +270,7 @@ def search_copernicus_items(collection_id, start_date, end_date, limit=10):
         "collection": clean_collection,
         "start_date": start.isoformat(),
         "end_date": end.isoformat(),
+        "max_cloud_cover": max_cloud_cover,
         "count": len(items),
         "items": items,
         "has_more": any(isinstance(link, dict) and link.get("rel") == "next" for link in (payload.get("links") or [])),
