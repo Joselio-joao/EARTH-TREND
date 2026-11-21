@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Activity, ArrowRight, BarChart3, BookOpen, Check, ChevronDown, CircleHelp, CloudRain, Database, Download, Earth, Expand, FileText, Filter, Gauge, Globe2, Layers3, LineChart, Map as MapIcon, Menu, Minimize2, Moon, Network, PanelLeft, Play, RotateCcw, Satellite, Search, Settings, ShieldCheck, Sparkles, Sprout, Sun, Table2, TrendingDown, TrendingUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './styles.css';
 import './polish.css';
-import { ApiStatus, CopernicusCollection, DatasetRecord, ProvinceRecord, checkApi, loadApiCatalog, loadRegionGeoJSON, mapPreviewUrl, runAnalysis, searchCatalog, searchCopernicusCollections } from './api';
+import { ApiStatus, CopernicusCollection, CopernicusItem, DatasetRecord, ProvinceRecord, checkApi, loadApiCatalog, loadRegionGeoJSON, mapPreviewUrl, runAnalysis, searchCatalog, searchCopernicusCollections, searchCopernicusItems } from './api';
 
 type Page='overview'|'explore'|'lab'|'data'|'investigations'|'methodology'|'settings'|'terms';
 type Settings={language:'pt'|'en';map:'Relief'|'Satellite'|'Heat'|'Contour';chart:'Linha'|'Barras'|'Dispersão'|'Área'|'Histograma'|'Circular';compact:boolean};
@@ -154,6 +154,13 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
  const [copernicusBusy,setCopernicusBusy]=useState(false);
  const [copernicusError,setCopernicusError]=useState('');
  const [copernicusNotice,setCopernicusNotice]=useState('');
+ const [itemCollection,setItemCollection]=useState('sentinel-2-l2a');
+ const [itemStart,setItemStart]=useState('2026-10-01');
+ const [itemEnd,setItemEnd]=useState('2026-10-31');
+ const [copernicusItems,setCopernicusItems]=useState<CopernicusItem[]|null>(null);
+ const [itemsBusy,setItemsBusy]=useState(false);
+ const [itemsError,setItemsError]=useState('');
+ const [itemsNotice,setItemsNotice]=useState('');
  const [externalQuery,setExternalQuery]=useState('');
  const externalMatches=EXTERNAL_CATALOG.filter(item=>[item.name,item.provider,item.category,item.variables,item.coverage].join(' ').toLowerCase().includes(externalQuery.trim().toLowerCase()));
  const submit=async()=>{
@@ -164,6 +171,16 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
    setResults(datasets.filter(d=>[d.name,d.variable_label,d.provider,d.id].join(' ').toLowerCase().includes(q)));
    setSearchError('A API não respondeu. Estes resultados são apenas a filtragem local do catálogo carregado.');
   }finally{setSearchBusy(false)}
+ };
+ const submitItems=async()=>{
+  setItemsBusy(true);setItemsError('');setItemsNotice('');setCopernicusItems(null);
+  try{
+   const r=await searchCopernicusItems(itemCollection,itemStart,itemEnd,10);
+   setCopernicusItems(r.items||[]);
+   setItemsNotice(r.notice||'Resultados de metadados STAC para a área de Angola.');
+  }catch(e){
+   setItemsError(e instanceof Error?e.message:'Não foi possível consultar os produtos Copernicus.');
+  }finally{setItemsBusy(false)}
  };
  const submitCopernicus=async()=>{
   setCopernicusBusy(true);setCopernicusError('');setCopernicusNotice('');
@@ -198,7 +215,30 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
     <dl><dt>ID</dt><dd>{item.id}</dd><dt>Plataforma</dt><dd>{item.providers.length?item.providers.join(', '):'Não indicada'}</dd><dt>Período</dt><dd>{item.temporal_start||'—'} até {item.temporal_end||'presente/não indicado'}</dd><dt>Palavras-chave</dt><dd>{item.keywords.slice(0,5).join(', ')||'—'}</dd></dl>
     <a href={item.collection_url} target="_blank" rel="noreferrer" className="external-source-link">Abrir registo STAC <ArrowRight size={14}/></a>
    </article>)}</div></>}
-   <p className="panel-note">Esta integração pesquisa coleções e metadados. Não descarrega os produtos nem garante acesso a todos os ficheiros: autenticação, licença e disponibilidade são verificadas coleção a coleção.</p>
+   <div className="copernicus-item-search">
+    <div className="copernicus-item-heading"><div><span className="eyebrow">ETAPA SEGUINTE · PRODUTOS</span><h3>Encontrar imagens sobre Angola</h3></div><span className="phase active">STAC ITEM SEARCH</span></div>
+    <p className="panel-note">Pesquisa registos de produtos por coleção e período, com intersecção espacial pelo contorno nacional de referência de Angola.</p>
+    <div className="copernicus-item-filters">
+     <label>Coleção STAC<input value={itemCollection} onChange={e=>setItemCollection(e.target.value)} placeholder="sentinel-2-l2a"/></label>
+     <label>Data inicial<input type="date" value={itemStart} onChange={e=>setItemStart(e.target.value)}/></label>
+     <label>Data final<input type="date" value={itemEnd} onChange={e=>setItemEnd(e.target.value)}/></label>
+     <button className="button dark" onClick={submitItems} disabled={itemsBusy||!itemCollection.trim()||!itemStart||!itemEnd}><Search size={15}/>{itemsBusy?'A procurar produtos…':'Procurar produtos sobre Angola'}</button>
+    </div>
+    {itemsError&&<p className="field-hint">{itemsError}</p>}
+    {itemsNotice&&<p className="panel-note">{itemsNotice}</p>}
+    {copernicusItems&&<div className="copernicus-items-results">
+     <div className="catalog-result-heading"><b>{copernicusItems.length} produto(s) encontrados</b><span>{itemCollection} · {itemStart} a {itemEnd}</span></div>
+     {copernicusItems.length===0&&<p className="panel-note">Não foram encontrados produtos com estes filtros. Experimenta outro período ou coleção.</p>}
+     <div className="external-catalog-grid">{copernicusItems.map(item=><article className="external-catalog-card copernicus-item-card" key={item.id}>
+      <div className="external-card-top"><span className="phase active">PRODUTO LOCALIZADO</span><span className="tag">{item.processing_level||item.product_type||'STAC item'}</span></div>
+      <h3>{item.datetime?item.datetime.slice(0,10):'Data não indicada'}</h3><p className="copernicus-item-id">{item.id}</p>
+      <dl><dt>Plataforma</dt><dd>{item.platform||'Não indicada'}</dd><dt>Nuvens</dt><dd>{item.cloud_cover===null||item.cloud_cover===undefined?'Não indicado':item.cloud_cover.toFixed(1)+'%'}</dd><dt>Resolução</dt><dd>{item.gsd_m===null||item.gsd_m===undefined?'Não indicada':item.gsd_m.toFixed(0)+' m (nominal)'}</dd><dt>Sensor</dt><dd>{item.instruments.join(', ')||'Não indicado'}</dd></dl>
+      <a href={item.item_url} target="_blank" rel="noreferrer" className="external-source-link">Abrir registo do produto <ArrowRight size={14}/></a>
+     </article>)}</div>
+     {copernicusItems.length>0&&<p className="panel-note">Os resultados são metadados de produtos que intersectam a geometria nacional de referência. A consulta não descarrega bandas nem calcula índices ambientais.</p>}
+    </div>}
+   </div>
+   <p className="panel-note">A pesquisa de coleções descobre metadados. A pesquisa de produtos devolve registos STAC que intersectam Angola; a disponibilidade dos assets, autenticação e condições de uso são verificadas produto a produto. Esta integração ainda não executa análise raster Copernicus.</p>
   </div>
   <div className="panel table-panel">
    <div className="panel-title"><div className="panel-title-name"><Table2 size={17}/><h3>Catálogo de datasets ligados</h3></div><span className="tag">{datasets.length} DATASETS</span></div>

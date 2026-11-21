@@ -60,6 +60,35 @@ export type CopernicusCollectionsResponse = {
   notice: string;
 };
 
+export type CopernicusItem = {
+  id: string;
+  collection: string;
+  datetime?: string | null;
+  platform?: string | null;
+  instruments: string[];
+  cloud_cover?: number | null;
+  gsd_m?: number | null;
+  processing_level?: string | null;
+  product_type?: string | null;
+  bbox?: number[] | null;
+  item_url: string;
+  source: string;
+  catalog_status: string;
+};
+
+export type CopernicusItemsResponse = {
+  collection: string;
+  start_date: string;
+  end_date: string;
+  count: number;
+  items: CopernicusItem[];
+  has_more: boolean;
+  source: string;
+  spatial_scope: string;
+  retrieval: 'metadata_only';
+  notice: string;
+};
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://earthtrend-ai-api.onrender.com').replace(/\/$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -139,6 +168,11 @@ export async function searchCatalog(query: string): Promise<{query:string;count:
 export async function searchCopernicusCollections(query: string, limit = 10): Promise<CopernicusCollectionsResponse> {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
   return request<CopernicusCollectionsResponse>(`/search/copernicus/collections?${params.toString()}`);
+}
+
+export async function searchCopernicusItems(collection: string, start: string, end: string, limit = 10): Promise<CopernicusItemsResponse> {
+  const params = new URLSearchParams({ collection, start, end, limit: String(limit) });
+  return request<CopernicusItemsResponse>(`/search/copernicus/items?${params.toString()}`);
 }
 
 export async function loadRegionGeoJSON(regionId: string): Promise<any> {
