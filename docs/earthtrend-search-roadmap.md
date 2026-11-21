@@ -53,7 +53,7 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 ## Phase 2 implemented — Copernicus collection discovery
 
 - Live collection search endpoint: `/search/copernicus/collections?q=...`.
-- Uses the Copernicus Data Space Ecosystem STAC 1.1 catalogue endpoint announced in October 2026.
+- Uses the current official Copernicus Data Space Ecosystem STAC 1.1 endpoint: `https://stac.dataspace.copernicus.eu/v1`.
 - Search covers collection titles, descriptions and keywords via the STAC collection `q` parameter.
 - The backend applies a bounded result limit, timeout, per-client rate limit and short in-memory cache.
 - Search results preserve the collection ID, title, description, provider, declared license, temporal extent, spatial extent, keywords and official STAC URL.
@@ -71,7 +71,7 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 
 ## Phase 3 implemented — Copernicus item discovery for Angola
 
-- Live item endpoint: `/search/copernicus/items?collection=sentinel-2-l2a&start=2026-10-01&end=2026-10-31&limit=10`.
+- Live item endpoint: `/search/copernicus/items?collection=sentinel-2-l2a&start=2026-10-01&end=2026-10-31&limit=10`, using the current official CDSE STAC endpoint.
 - Uses STAC Item Search with the dissolved national outline of Angola as a GeoJSON `intersects` geometry, rather than a broad rectangular bounding box.
 - Returns product ID, acquisition time, platform, sensor, declared cloud cover, nominal GSD, processing level, product type and official STAC item URL.
 - Maximum date span is 366 days, results are capped, requests are rate-limited and responses are briefly cached.
@@ -87,3 +87,8 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 3. Add one direct data adapter for a product with reliable public access and a testable sample file.
 4. Add provider selection in analysis settings and a provenance panel for every result.
 5. Compare normalized outputs against Earth Engine, with unit, quality-flag and temporal-coverage checks, before any engine migration.
+
+
+## Endpoint maintenance note
+
+The connector uses the current official STAC endpoint documented by Copernicus Data Space: `https://stac.dataspace.copernicus.eu/v1`. The older `stac.opensearch.dataspace.copernicus.eu` host returned an upstream request-rejected HTML response for POST item searches, so it must not be used for the spatial Item Search adapter.
