@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from app.data.search_engine import (COPERNICUS_STAC_ROOT, CatalogProviderError, _COLLECTIONS_CACHE, _ITEMS_CACHE, engine_status,
+from app.data.search_engine import (COPERNICUS_STAC_ROOT, CatalogProviderError, _COLLECTIONS_CACHE, _ITEMS_CACHE, _NASA_CMR_CACHE, engine_status, search_nasa_cmr_collections, search_nasa_cmr_granules,
                                     normalize, search_catalog, search_copernicus_collections, search_copernicus_items)
 
 
@@ -133,6 +133,65 @@ class CatalogSearchTests(unittest.TestCase):
     def test_copernicus_item_search_rejects_ranges_over_one_year(self):
         with self.assertRaises(ValueError):
             search_copernicus_items("sentinel-2-l2a", "2024-01-01", "2025-01-03", 5)
+
+    def test_nasa_cmr_collection_search_returns_live_metadata(self):
+        _NASA_CMR_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"CMR-Hits": "23"}
+        response.json.return_value = {"feed": {"entry": [{
+            "id": "C123-PROV",
+            "short_name": "MOD13Q1",
+            "title": "Vegetation Indices",
+            "version": "061",
+            "provider": "LPDAAC",
+            "time_start": "2000-02-18T00:00:00Z",
+            "time_end": "2026-11-01T00:00:00Z",
+            "links": [{"rel": "metadata", "href": "https://metadata.example"}],
+        }]}}
+        with patch("app.data.search_engine.requests.get", return_value=response) as get:
+            result = search_nasa_cmr_collections("vegetation", 5)
+        self.assertEqual(result["total_hits"], 23)
+        self.assertEqual(result["results"][0]["short_name"], "MOD13Q1")
+        self.assertEqual(result["results"][0]["provider"], "LPDAAC")
+        self.assertEqual(result["results"][0]["metadata_url"], "https://metadata.example")
+        self.assertEqual(result["retrieval"], "metadata_only")
+        self.assertEqual(get.call_args.args[0], "https://cmr.earthdata.nasa.gov/search/collections.json")
+        self.assertEqual(get.call_args.kwargs["params"]["keyword"], "vegetation")
+        _NASA_CMR_CACHE.clear()
+
+    def test_nasa_cmr_granule_search_returns_metadata_and_angola_bbox(self):
+        _NASA_CMR_CACHE.clear()
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"CMR-Hits": "3"}
+        response.json.return_value = {"feed": {"entry": [{
+            "id": "G123-LPDAAC",
+            "title": "MOD13Q1.A2026297",
+            "producer_granule_id": "MOD13Q1.A2026297.hdf",
+            "short_name": "MOD13Q1",
+            "collection_concept_id": "C123-LPDAAC",
+            "time_start": "2026-10-24T00:00:00Z",
+            "time_end": "2026-10-25T00:00:00Z",
+            "cloud_cover": "18",
+            "size": "45.5",
+            "links": [{"rel": "data", "href": "https://data.example/file.hdf"}],
+        }]}}
+        with patch("app.data.search_engine.requests.get", return_value=response) as get:
+            result = search_nasa_cmr_granules("MOD13Q1", "2026-10-01", "2026-10-31", 5, 20)
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(result["items"][0]["cloud_cover"], 18.0)
+        self.assertEqual(result["items"][0]["data_links"], ["https://data.example/file.hdf"])
+        self.assertEqual(result["retrieval"], "metadata_only")
+        params = get.call_args.kwargs["params"]
+        self.assertEqual(params["bounding_box"], "11.6,-18.1,24.1,-4.2")
+        self.assertEqual(params["cloud_cover"], ",20.0")
+        self.assertEqual(params["short_name"], "MOD13Q1")
+        _NASA_CMR_CACHE.clear()
+
+    def test_nasa_cmr_granule_search_rejects_invalid_cloud_limit(self):
+        with self.assertRaises(ValueError):
+            search_nasa_cmr_granules("MOD13Q1", "2026-10-01", "2026-10-31", 5, 101)
 
     def test_provider_status_discloses_phase(self):
         status = engine_status()

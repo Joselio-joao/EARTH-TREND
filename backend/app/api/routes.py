@@ -4,7 +4,7 @@ from fastapi.responses import Response
 
 from ..security import enforce_rate_limit
 from ..errors import ApiError
-from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, search_copernicus_items, engine_status
+from ..data.search_engine import CatalogProviderError, search_catalog, search_copernicus_collections, search_copernicus_items, search_nasa_cmr_collections, search_nasa_cmr_granules, engine_status
 
 from .schemas import AnalysisRequest
 
@@ -73,6 +73,37 @@ def copernicus_items_endpoint(
     enforce_rate_limit(request, "copernicus_items", limit=12, window_seconds=60)
     try:
         return search_copernicus_items(collection, start, end, limit, max_cloud_cover)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except CatalogProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/search/nasa/cmr/collections", tags=["pesquisa"], summary="Pesquisa ao vivo de coleções NASA Earthdata CMR")
+def nasa_cmr_collections_endpoint(
+    request: Request,
+    q: str = Query("", max_length=120),
+    limit: int = Query(10, ge=1, le=20),
+):
+    enforce_rate_limit(request, "nasa_cmr_catalog", limit=20, window_seconds=60)
+    try:
+        return search_nasa_cmr_collections(q, limit)
+    except CatalogProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/search/nasa/cmr/granules", tags=["pesquisa"], summary="Pesquisa granules NASA CMR sobre a região aproximada de Angola")
+def nasa_cmr_granules_endpoint(
+    request: Request,
+    short_name: str = Query(..., min_length=1, max_length=120),
+    start: str = Query(..., min_length=10, max_length=10),
+    end: str = Query(..., min_length=10, max_length=10),
+    limit: int = Query(10, ge=1, le=20),
+    max_cloud_cover: float | None = Query(None, ge=0, le=100),
+):
+    enforce_rate_limit(request, "nasa_cmr_granules", limit=12, window_seconds=60)
+    try:
+        return search_nasa_cmr_granules(short_name, start, end, limit, max_cloud_cover)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except CatalogProviderError as exc:

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Activity, ArrowRight, BarChart3, BookOpen, Check, ChevronDown, CircleHelp, CloudRain, Database, Download, Earth, Expand, FileText, Filter, Gauge, Globe2, Layers3, LineChart, Map as MapIcon, Menu, Minimize2, Moon, Network, PanelLeft, Play, RotateCcw, Satellite, Search, Settings, ShieldCheck, Sparkles, Sprout, Sun, Table2, TrendingDown, TrendingUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 import './styles.css';
 import './polish.css';
-import { ApiStatus, CopernicusCollection, CopernicusItem, DatasetRecord, ProvinceRecord, checkApi, loadApiCatalog, loadRegionGeoJSON, mapPreviewUrl, runAnalysis, searchCatalog, searchCopernicusCollections, searchCopernicusItems } from './api';
+import { ApiStatus, CopernicusCollection, CopernicusItem, DatasetRecord, ProvinceRecord, checkApi, loadApiCatalog, loadRegionGeoJSON, mapPreviewUrl, runAnalysis, searchCatalog, searchCopernicusCollections, searchCopernicusItems, searchNasaCmrCollections, searchNasaCmrGranules, NasaCmrCollection, NasaCmrGranule } from './api';
 
 type Page='overview'|'explore'|'lab'|'data'|'investigations'|'methodology'|'settings'|'terms';
 type Settings={language:'pt'|'en';map:'Relief'|'Satellite'|'Heat'|'Contour';chart:'Linha'|'Barras'|'Dispersão'|'Área'|'Histograma'|'Circular';compact:boolean};
@@ -163,6 +163,19 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
  const [itemsError,setItemsError]=useState('');
  const [itemsNotice,setItemsNotice]=useState('');
  const [externalQuery,setExternalQuery]=useState('');
+ const [nasaCmrQuery,setNasaCmrQuery]=useState('vegetation');
+ const [nasaCmrCollections,setNasaCmrCollections]=useState<NasaCmrCollection[]|null>(null);
+ const [nasaCmrBusy,setNasaCmrBusy]=useState(false);
+ const [nasaCmrError,setNasaCmrError]=useState('');
+ const [nasaShortName,setNasaShortName]=useState('MOD13Q1');
+ const [nasaStart,setNasaStart]=useState('2026-10-01');
+ const [nasaEnd,setNasaEnd]=useState('2026-10-31');
+ const [nasaCloud,setNasaCloud]=useState('');
+ const [nasaGranules,setNasaGranules]=useState<NasaCmrGranule[]|null>(null);
+ const [nasaGranulesBusy,setNasaGranulesBusy]=useState(false);
+ const [nasaGranulesError,setNasaGranulesError]=useState('');
+ const [nasaGranulesNotice,setNasaGranulesNotice]=useState('');
+
  const externalMatches=EXTERNAL_CATALOG.filter(item=>[item.name,item.provider,item.category,item.variables,item.coverage].join(' ').toLowerCase().includes(externalQuery.trim().toLowerCase()));
  const submit=async()=>{
   setSearchBusy(true);setSearchError('');
@@ -183,6 +196,21 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
   }catch(e){
    setItemsError(e instanceof Error?e.message:'Não foi possível consultar os produtos Copernicus.');
   }finally{setItemsBusy(false)}
+ };
+ const submitNasaCmr=async()=>{
+  setNasaCmrBusy(true);setNasaCmrError('');
+  try{const r=await searchNasaCmrCollections(nasaCmrQuery,12);setNasaCmrCollections(r.results||[])}
+  catch(e){setNasaCmrCollections(null);setNasaCmrError(e instanceof Error?e.message:'Não foi possível consultar NASA CMR.')}
+  finally{setNasaCmrBusy(false)}
+ };
+ const submitNasaGranules=async()=>{
+  setNasaGranulesBusy(true);setNasaGranulesError('');setNasaGranulesNotice('');setNasaGranules(null);
+  try{
+   const cloud=nasaCloud===''?undefined:Number(nasaCloud);
+   const r=await searchNasaCmrGranules(nasaShortName,nasaStart,nasaEnd,10,cloud);
+   setNasaGranules(r.items||[]);setNasaGranulesNotice(r.notice||'Metadados NASA CMR.');
+  }catch(e){setNasaGranulesError(e instanceof Error?e.message:'Não foi possível consultar granules NASA CMR.')}
+  finally{setNasaGranulesBusy(false)}
  };
  const submitCopernicus=async()=>{
   setCopernicusBusy(true);setCopernicusError('');setCopernicusNotice('');
@@ -242,6 +270,41 @@ function DataPage({t,datasets}:{t:any;datasets:DatasetRecord[]}){
     </div>}
    </div>
    <p className="panel-note">A pesquisa de coleções descobre metadados. A pesquisa de produtos devolve registos STAC que intersectam Angola; a disponibilidade dos assets, autenticação e condições de uso são verificadas produto a produto. Esta integração ainda não executa análise raster Copernicus.</p>
+  </div>
+  <div className="panel nasa-cmr-panel">
+   <div className="panel-title"><div className="panel-title-name"><Satellite size={17}/><h3>NASA Earthdata · CMR</h3></div><span className="phase active">CATÁLOGO AO VIVO</span></div>
+   <p className="panel-note">Pesquisa metadados no repositório NASA Common Metadata Repository, independente do catálogo Copernicus. A pesquisa não descarrega dados. Algumas coleções ou ficheiros podem exigir Earthdata Login.</p>
+   <div className="catalog-search"><input value={nasaCmrQuery} onChange={e=>setNasaCmrQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')submitNasaCmr()}} placeholder="Ex.: precipitação, MODIS, Landsat, soil moisture…"/><button className="button dark" onClick={submitNasaCmr} disabled={nasaCmrBusy}><Search size={15}/>{nasaCmrBusy?'A pesquisar CMR…':'Pesquisar coleções NASA'}</button></div>
+   {nasaCmrError&&<p className="field-hint">{nasaCmrError}</p>}
+   {nasaCmrCollections&&<><div className="catalog-result-heading"><b>{nasaCmrCollections.length} coleção(ões) retornadas</b><span>NASA CMR · metadados</span></div><div className="external-catalog-grid">{nasaCmrCollections.map(item=><article className="external-catalog-card nasa-cmr-card" key={item.id||item.short_name}>
+    <div className="external-card-top"><span className="phase active">METADADOS AO VIVO</span><span className="tag">{item.provider||'Provider não indicado'}</span></div>
+    <h3>{item.title||item.short_name}</h3><p>{item.summary||'O catálogo não disponibilizou uma descrição resumida.'}</p>
+    <dl><dt>Short name</dt><dd>{item.short_name||'—'}</dd><dt>Versão</dt><dd>{item.version||'—'}</dd><dt>Período</dt><dd>{item.start_date||'—'} até {item.end_date||'—'}</dd><dt>Concept ID</dt><dd>{item.id||'—'}</dd></dl>
+    <div className="nasa-cmr-card-actions"><button className="button secondary" onClick={()=>setNasaShortName(item.short_name||'')}>Usar short name</button><a href={item.metadata_url||item.earthdata_url} target="_blank" rel="noreferrer" className="external-source-link">Metadados <ArrowRight size={14}/></a></div>
+   </article>)}</div></>}
+   <div className="nasa-cmr-granule-search">
+    <div className="copernicus-item-heading"><div><span className="eyebrow">NASA CMR · GRANULES</span><h3>Pesquisar granules sobre Angola</h3></div><span className="phase active">NASA API</span></div>
+    <p className="panel-note">Consulta pelo short name, intervalo temporal e caixa geográfica aproximada de Angola. A caixa inclui possíveis áreas vizinhas; não é uma máscara exacta da fronteira.</p>
+    <div className="copernicus-item-filters nasa-cmr-filters">
+     <label>Short name<input value={nasaShortName} onChange={e=>setNasaShortName(e.target.value)} placeholder="Ex.: MOD13Q1"/></label>
+     <label>Data inicial<input type="date" value={nasaStart} onChange={e=>setNasaStart(e.target.value)}/></label>
+     <label>Data final<input type="date" value={nasaEnd} onChange={e=>setNasaEnd(e.target.value)}/></label>
+     <label>Nuvens máximas<select value={nasaCloud} onChange={e=>setNasaCloud(e.target.value)}><option value="">Qualquer</option><option value="20">Até 20%</option><option value="40">Até 40%</option><option value="60">Até 60%</option><option value="80">Até 80%</option></select></label>
+     <button className="button dark" onClick={submitNasaGranules} disabled={nasaGranulesBusy||!nasaShortName.trim()||!nasaStart||!nasaEnd}><Search size={15}/>{nasaGranulesBusy?'A pesquisar granules…':'Pesquisar granules'}</button>
+    </div>
+    {nasaGranulesError&&<p className="field-hint">{nasaGranulesError}</p>}
+    {nasaGranulesNotice&&<p className="panel-note">{nasaGranulesNotice}</p>}
+    {nasaGranules&&<div className="copernicus-items-results"><div className="catalog-result-heading"><b>{nasaGranules.length} granule(s) retornados</b><span>{nasaShortName} · {nasaStart} a {nasaEnd} · {nasaCloud===''?'qualquer nuvem':'≤ '+nasaCloud+'%'}</span></div>
+     {nasaGranules.length===0&&<p className="panel-note">Nenhum registo com estes filtros. Verifica o short name e tenta outro período.</p>}
+     <div className="external-catalog-grid">{nasaGranules.map(item=><article className="external-catalog-card nasa-cmr-granule-card" key={item.id||item.producer_granule_id}>
+      <div className="external-card-top"><span className="phase active">GRANULE LOCALIZADO</span><span className="tag">{item.day_night||'Dia/noite não indicado'}</span></div>
+      <h3>{item.start_date?item.start_date.slice(0,10):'Data não indicada'}</h3><p className="copernicus-item-id">{item.producer_granule_id||item.title||item.id}</p>
+      <dl><dt>Short name</dt><dd>{item.short_name||nasaShortName}</dd><dt>Nuvens</dt><dd>{item.cloud_cover===null||item.cloud_cover===undefined?'Não indicado':item.cloud_cover.toFixed(1)+'%'}</dd><dt>Tamanho</dt><dd>{item.size_mb===null||item.size_mb===undefined?'Não indicado':item.size_mb.toFixed(1)+' MB'}</dd><dt>Concept ID</dt><dd>{item.collection_concept_id||'—'}</dd></dl>
+      <div className="nasa-cmr-card-actions">{item.metadata_url&&<a href={item.metadata_url} target="_blank" rel="noreferrer" className="external-source-link">Metadata <ArrowRight size={14}/></a>}{item.data_links.map((url,i)=><a key={url} href={url} target="_blank" rel="noreferrer" className="external-source-link">Data {i+1} <ArrowRight size={14}/></a>)}{item.browse_links.map((url,i)=><a key={url} href={url} target="_blank" rel="noreferrer" className="external-source-link">Preview {i+1} <ArrowRight size={14}/></a>)}</div>
+     </article>)}</div>
+    </div>}
+   </div>
+   <p className="panel-note">O EarthTrend Search agora consulta NASA CMR e Copernicus STAC ao vivo. Estes são registos de catálogo; os ficheiros não são baixados nem analisados pelo motor de tendências. O uso pode exigir Earthdata Login e verificar licença.</p>
   </div>
   <div className="panel table-panel">
    <div className="panel-title"><div className="panel-title-name"><Table2 size={17}/><h3>Catálogo de datasets ligados</h3></div><span className="tag">{datasets.length} DATASETS</span></div>

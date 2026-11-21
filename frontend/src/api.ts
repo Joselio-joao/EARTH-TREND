@@ -90,6 +90,66 @@ export type CopernicusItemsResponse = {
   notice: string;
 };
 
+
+export type NasaCmrCollection = {
+  id?: string | null;
+  short_name?: string | null;
+  title?: string | null;
+  version?: string | null;
+  provider?: string | null;
+  summary?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  bbox?: any;
+  metadata_url?: string | null;
+  earthdata_url: string;
+  source: string;
+  catalog_status: string;
+};
+
+export type NasaCmrCollectionsResponse = {
+  query: string;
+  count: number;
+  total_hits?: number | null;
+  results: NasaCmrCollection[];
+  source: string;
+  catalogue_url: string;
+  retrieval: 'metadata_only';
+  notice: string;
+};
+
+export type NasaCmrGranule = {
+  id?: string | null;
+  title?: string | null;
+  producer_granule_id?: string | null;
+  short_name?: string | null;
+  collection_concept_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  cloud_cover?: number | null;
+  day_night?: string | null;
+  size_mb?: number | null;
+  data_links: string[];
+  browse_links: string[];
+  metadata_url?: string | null;
+  source: string;
+  catalog_status: string;
+};
+
+export type NasaCmrGranulesResponse = {
+  short_name: string;
+  start_date: string;
+  end_date: string;
+  max_cloud_cover?: number | null;
+  count: number;
+  total_hits?: number | null;
+  items: NasaCmrGranule[];
+  source: string;
+  spatial_scope: string;
+  retrieval: 'metadata_only';
+  notice: string;
+};
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://earthtrend-ai-api.onrender.com').replace(/\/$/, '');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -164,6 +224,18 @@ export async function runAnalysis(payload: {
 export async function searchCatalog(query: string): Promise<{query:string;count:number;results:DatasetRecord[];engine:any}> {
   const params = new URLSearchParams({q:query,limit:'30'});
   return request<{query:string;count:number;results:DatasetRecord[];engine:any}>(`/search/catalog?${params.toString()}`);
+}
+
+
+export async function searchNasaCmrCollections(query: string, limit = 10): Promise<NasaCmrCollectionsResponse> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return request<NasaCmrCollectionsResponse>(`/search/nasa/cmr/collections?${params.toString()}`);
+}
+
+export async function searchNasaCmrGranules(shortName: string, start: string, end: string, limit = 10, maxCloudCover?: number): Promise<NasaCmrGranulesResponse> {
+  const params = new URLSearchParams({ short_name: shortName, start, end, limit: String(limit) });
+  if (maxCloudCover !== undefined) params.set('max_cloud_cover', String(maxCloudCover));
+  return request<NasaCmrGranulesResponse>(`/search/nasa/cmr/granules?${params.toString()}`);
 }
 
 export async function searchCopernicusCollections(query: string, limit = 10): Promise<CopernicusCollectionsResponse> {

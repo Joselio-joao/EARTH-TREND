@@ -93,3 +93,13 @@ Do not remove Earth Engine until a replacement connector demonstrates parity for
 ## Endpoint maintenance note
 
 The connector uses the current official STAC endpoint documented by Copernicus Data Space: `https://stac.dataspace.copernicus.eu/v1`. The older `stac.opensearch.dataspace.copernicus.eu` host returned an upstream request-rejected HTML response for POST item searches, so it must not be used for the spatial Item Search adapter.
+
+
+## NASA Earthdata CMR — live discovery (implemented)
+
+- Live collection search at CMR `/search/collections.json` with keyword and metadata cards.
+- Live granule search at `/search/granules.json` using short name, temporal interval, approximate Angola bounding box, and optional cloud-cover threshold.
+- CMR metadata links, producer granule IDs, collection concept IDs, data/browse links and size are shown when provided by the API.
+- NASA CMR is catalog metadata only: this integration does not download files, process pixels, or calculate environmental indices.
+- The spatial filter is a bounding box (11.6°E–24.1°E, 18.1°S–4.2°S), not an exact national polygon; neighboring territory may appear.
+- Dataset download links may require Earthdata Login or access permissions.

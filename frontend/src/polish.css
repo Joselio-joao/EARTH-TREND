@@ -152,3 +152,17 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
 .copernicus-item-id{font:10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#6e7e73;overflow-wrap:anywhere}
 @media(max-width:850px){.copernicus-item-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.copernicus-item-filters label:first-child{grid-column:1/-1}.copernicus-item-filters .button{grid-column:1/-1;justify-content:center}}
 @media(max-width:460px){.copernicus-item-heading{align-items:flex-start;flex-direction:column}.copernicus-item-filters{grid-template-columns:1fr}.copernicus-item-filters label:first-child{grid-column:auto}.copernicus-item-filters .button{grid-column:auto}}
+
+/* NASA CMR live metadata search */
+.nasa-cmr-panel{margin:18px 0}
+.nasa-cmr-card-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.nasa-cmr-card-actions .button{min-height:34px;padding:7px 10px;font-size:11px}
+.nasa-cmr-card-actions .external-source-link{font-size:11px}
+.nasa-cmr-granule-search{margin-top:22px;padding-top:18px;border-top:1px solid #e5ece7}
+.nasa-cmr-filters{grid-template-columns:minmax(150px,1.2fr) repeat(3,minmax(110px,1fr)) auto}
+.nasa-cmr-granule-card .copernicus-item-id{overflow-wrap:anywhere}
+@media(max-width:760px){
+ .nasa-cmr-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .nasa-cmr-filters button{grid-column:1/-1}
+ .nasa-cmr-card-actions{align-items:flex-start}
+}
