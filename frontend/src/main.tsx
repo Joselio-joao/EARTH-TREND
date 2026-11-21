@@ -11,6 +11,7 @@ type SettingsTab='general'|'visual'|'science'|'accessibility';
 const initialSettings:Settings={language:'pt',map:'Relief',chart:'Linha',compact:false};
 const labels={pt:{overview:'Visão geral',explore:'Explorar a Terra',lab:'Trend Lab',data:'Biblioteca de dados',investigations:'Investigações',methodology:'Metodologia',settings:'Configurações',newStudy:'Nova investigação',run:'Executar análise',save:'Guardar preferências'},en:{overview:'Overview',explore:'Explore Earth',lab:'Trend Lab',data:'Data library',investigations:'Investigations',methodology:'Methodology',settings:'Settings',newStudy:'New investigation',run:'Run analysis',save:'Save preferences'}};
 const angolaProvinces=['Bengo','Benguela','Bié','Cabinda','Cuando','Cuanza Norte','Cuanza Sul','Cubango','Cunene','Huambo','Huíla','Icolo e Bengo','Luanda','Lunda Norte','Lunda Sul','Malanje','Moxico','Moxico Leste','Namibe','Uíge','Zaire'];
+const regionSlug=(name:string)=>name==='Angola — todas as províncias'?'angola':name.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/,\\s*angola$/,'').trim().replace(/\\s+/g,'_');
 
 function App(){
  const [page,setPage]=useState<Page>('overview'); const [mobile,setMobile]=useState(false); const [apiStatus,setApiStatus]=useState<ApiStatus>('loading'); const [datasets,setDatasets]=useState<DatasetRecord[]>([]); const [provinces,setProvinces]=useState<ProvinceRecord[]>([]); const [catalogLoading,setCatalogLoading]=useState(true); const [catalogError,setCatalogError]=useState(''); const [settingsTab,setSettingsTab]=useState<SettingsTab>('general'); const [cookies,setCookies]=useState(()=>localStorage.getItem('earthtrend-cookie-consent')==='accepted'); const [settings,setSettings]=useState<Settings>(()=>{try{return {...initialSettings,...JSON.parse(localStorage.getItem('earthtrend-react-settings')||'{}')}}catch{return initialSettings}}); const [region,setRegion]=useState('Angola — todas as províncias'); const [variable,setVariable]=useState('Precipitação'); const [period,setPeriod]=useState('2000–2025'); const [selectedDatasetId,setSelectedDatasetId]=useState('gpm_imerg_monthly'); const [periodMode,setPeriodMode]=useState<'annual'|'five_year'|'decade'>('annual'); const [ran,setRan]=useState(false); const t=labels[settings.language];
@@ -47,7 +48,7 @@ function MapPanel({src,dataset,region,period}:{src:string;dataset?:DatasetRecord
    <button type="button" aria-label={expanded?'Recolher mapa':'Expandir mapa'} title={expanded?'Recolher':'Expandir'} onClick={()=>setExpanded(v=>!v)}>{expanded?<Minimize2 size={16}/>:<Expand size={16}/>}</button>
   </div>
   <div className="raster-image-frame">
-   <GeoLayer regionId="angola" overlay/>
+   <GeoLayer regionId={regionSlug(region)} overlay/>
    {!loaded&&!failed&&<div className="raster-state">A gerar e carregar a camada raster NASA…</div>}
    {failed&&<div className="raster-state raster-error">Não foi possível carregar o mapa. Verifica a disponibilidade do Earth Engine e tenta novamente após o intervalo de espera.</div>}
    <img src={src} alt={`Raster ambiental de ${dataset?.name||'variável NASA'} em ${region}, período ${period}. A imagem representa a média temporal das imagens disponíveis.`} onLoad={()=>setLoaded(true)} onError={()=>setFailed(true)} style={{width:(zoom*100)+'%',maxWidth:'none',display:loaded?'block':'none'}}/>
