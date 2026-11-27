@@ -249,6 +249,39 @@ export async function searchCopernicusItems(collection: string, start: string, e
   return request<CopernicusItemsResponse>(`/search/copernicus/items?${params.toString()}`);
 }
 
+
+export type USGSEvent = { id:string; magnitude:number|null; place:string; time:number; depth_km:number|null; longitude:number; latitude:number; url:string };
+export type USGSEventsResponse = { count:number; events:USGSEvent[]; source:string; query_url:string };
+export async function searchUSGSEvents(start:string,end:string,minMagnitude=2.5,limit=50):Promise<USGSEventsResponse>{
+ const p=new URLSearchParams({format:'geojson',starttime:start,endtime:end,minmagnitude:String(minMagnitude),minlatitude:'-18.04',maxlatitude:'-4.38',minlongitude:'11.66',maxlongitude:'24.08',orderby:'time',limit:String(limit)});
+ const url='https://earthquake.usgs.gov/fdsnws/event/1/query?'+p.toString();
+ const response=await fetch(url,{headers:{Accept:'application/geo+json'}});
+ if(!response.ok)throw new Error('USGS respondeu HTTP '+response.status);
+ const data=await response.json();
+ const events=(data.features||[]).map((f:any)=>({id:String(f.id||f.properties?.code||f.properties?.ids||''),magnitude:f.properties?.mag??null,place:f.properties?.place||'Localização não indicada',time:Number(f.properties?.time||0),depth_km:f.geometry?.coordinates?.[2]??null,longitude:f.geometry?.coordinates?.[0],latitude:f.geometry?.coordinates?.[1],url:f.properties?.url||''}));
+ return {count:events.length,events,source:'USGS ComCat / FDSN Event API',query_url:url};
+}
+export type ArcGISItem={id:string;title:string;snippet:string;type:string;owner:string;modified:number;url:string;item_url:string};
+export async function searchArcGIS(query:string,limit=8):Promise<{count:number;items:ArcGISItem[];query_url:string}>{
+ const p=new URLSearchParams({q:query,num:String(limit),f:'json',sortField:'relevance',sortOrder:'desc'});
+ const url='https://www.arcgis.com/sharing/rest/search?'+p.toString();
+ const response=await fetch(url,{headers:{Accept:'application/json'}});
+ if(!response.ok)throw new Error('ArcGIS respondeu HTTP '+response.status);
+ const data=await response.json();
+ if(data.error)throw new Error(data.error.message||'Erro de pesquisa ArcGIS');
+ return {count:Number(data.total||0),items:(data.results||[]).map((x:any)=>({id:x.id,title:x.title||'Sem título',snippet:x.snippet||'',type:x.type||'Item',owner:x.owner||'—',modified:Number(x.modified||0),url:x.url||'',item_url:'https://www.arcgis.com/home/item.html?id='+encodeURIComponent(x.id)})),query_url:url};
+}
+export type OSMFeature={type:string;id:number;tags:Record<string,string>;lat?:number;lon?:number;center?:{lat:number;lon:number}};
+export async function searchOSMNamedFeatures(query:string,limit=20):Promise<{count:number;features:OSMFeature[];source_url:string}>{
+ const safe=query.trim().replace(/[\\\\"|]/g,' ').slice(0,80); if(!safe)throw new Error('Indica um nome ou tipo geográfico para pesquisar.');
+ const bbox='-18.04,11.66,-4.38,24.08';
+ const q='[out:json][timeout:25];(node["name"~"'+safe+'",i]('+bbox+');way["name"~"'+safe+'",i]('+bbox+');relation["name"~"'+safe+'",i]('+bbox+'););out center 20;';
+ const endpoint='https://overpass-api.de/api/interpreter';
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q)});
+ if(!response.ok)throw new Error('Overpass/OSM respondeu HTTP '+response.status+'; pode estar ocupado ou limitar consultas.');
+ const data=await response.json(); return {count:(data.elements||[]).length,features:data.elements||[],source_url:'https://www.openstreetmap.org/'};
+}
+
 export async function loadRegionGeoJSON(regionId: string): Promise<any> {
   return request<any>(`/regions/${encodeURIComponent(regionId)}/geojson`);
 }
