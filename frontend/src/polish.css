@@ -166,3 +166,14 @@ select:disabled,button:disabled{opacity:.5;cursor:not-allowed}
  .nasa-cmr-filters button{grid-column:1/-1}
  .nasa-cmr-card-actions{align-items:flex-start}
 }
+
+/* Embedded reference map: Angola */
+.angola-reference-map{margin-top:18px;overflow:hidden;padding:0}
+.angola-reference-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:18px 20px 12px}
+.angola-reference-heading h3{margin:5px 0 6px;color:#183425;font-size:17px;letter-spacing:-.02em}
+.angola-reference-heading p{margin:0;color:#6b7e71;font-size:12px;line-height:1.6;max-width:620px}
+.angola-reference-heading>a{flex-shrink:0;margin-top:4px;color:#3f6650;font-size:11px;font-weight:700;text-decoration:none}
+.angola-reference-map iframe{display:block;width:100%;height:390px;border:0;background:#e9eee9}
+.angola-map-attribution{padding:8px 12px;text-align:right;color:#78877d;font-size:10px;background:#fbfcfb}
+.angola-map-attribution a{color:#526d5b}
+@media(max-width:620px){.angola-reference-heading{flex-direction:column;padding:15px}.angola-reference-map iframe{height:310px}}
